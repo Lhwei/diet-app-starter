@@ -1,46 +1,32 @@
-# 飲食管理 Webapp — Starter
+# 前端體感優化套用說明
 
-## 這一版包含什麼
-- ✅ Next.js App Router 專案骨架
-- ✅ Supabase Auth（Google OAuth）登入流程，session 存 httpOnly cookie（@supabase/ssr）
-- ✅ Notion Public Integration OAuth 2.0 授權流程（state 防 CSRF + TTL 驗證）
-- ✅ Supabase schema（notion_connections / oauth_states / user_profiles，全表 RLS）
-- ✅ 三大頁面基本 UI：/diet、/dashboard、/settings（RWD，Tailwind）
-- ✅ Middleware 自動保護未登入路由，導向 /login
+## 1. 安裝SWR套件
+npm install swr
 
-## 尚未包含（下一步）
-- ❌ Notion 自動建立「個人資料」「AI用PROMPT」頁面 + 「生理紀錄」「飲食紀錄」資料庫（冪等狀態機）
-- ❌ Notion token 刷新邏輯（refresh_token 輪替 + 併發鎖）
-- ❌ 飲食紀錄 CRUD API（含 database_id 歸屬驗證，防 IDOR）
-- ❌ 儀表板圖表資料彙整 API + 前端圖表元件
-- ❌ Electron 桌面版包裝
+## 2. 已包含的檔案
+- app/dashboard/loading.tsx, app/profile/loading.tsx, app/diet/loading.tsx, app/physio/loading.tsx
+  -> Next.js切頁時立即顯示骨架屏，不會有空白等待
+- lib/hooks/useNotionData.ts
+  -> useProfile() / useDietRecords() / usePhysioRecords() / useWeightProjection()
+  -> 內建SWR：先顯示舊資料(keepPreviousData)，背景重新驗證，30秒內重複請求直接吃快取
+- components/DashboardContent.tsx
+  -> 示範如何使用上面的hooks，並在新增/更新資料後呼叫refresh()立即更新畫面
+- components/SideNav.tsx
+  -> 示範用 <Link prefetch={true}> 讓使用者滑過/點擊前就先偷偷載入下一頁資料
 
-## 開始使用
+## 3. 需要隊長自行調整的地方
+- ProfileForm / WeightProjectionCard 這兩個既有元件的props介面，
+  天天示範的DashboardContent.tsx假設它們接受 (profile, isLoading, onSaved) 這種props，
+  實際簽名可能不同，請對照隊長現有元件調整。
+- 如果隊長專案裡有其他地方是用 fetch('/api/xxx') 直接呼叫API的，
+  建議統一改成呼叫 useNotionData.ts 裡對應的hook，這樣才能吃到SWR的快取跟自動更新機制。
+- 新增/更新/刪除資料的表單元件，記得在API呼叫成功後呼叫對應的 refresh()（例如 refreshDiet()），
+  這樣才能讓SWR立刻用最新資料更新畫面，而不是等到下次瀏覽器分頁切回來才自動重新驗證。
 
-1. 複製 `.env.example` 為 `.env.local`，填入：
-   - Supabase 專案的 URL / anon key / service role key（Settings → API）
-   - Notion Integration 的 client_id / client_secret（https://www.notion.so/my-integrations 建立 Public Integration）
-   - Notion redirect_uri 需與 Integration 設定的 Redirect URI 完全一致
+## 4. 三層快取搭配後的效果
+- 後端 lib/notion/queryCache.ts : 60秒內，同一份資料不重打Notion API
+- 前端 SWR (dedupingInterval 30秒) : 30秒內，同一份資料不重打伺服器API
+- <Link prefetch> : 使用者點擊前，資料已經在背景抓好
+- loading.tsx : 資料還沒回來前，畫面不會空白，有骨架屏過渡
 
-2. 在 Supabase SQL Editor 執行 `supabase/schema.sql` 建立資料表與 RLS policy
-
-3. 安裝套件並啟動開發伺服器：
-   ```bash
-   npm install
-   npm run dev
-   ```
-   開啟 http://localhost:3000
-
-4. Google OAuth 設定：
-   - 到 Supabase Dashboard → Authentication → Providers → 啟用 Google，填入 Google Cloud Console 的 Client ID/Secret
-   - Google Cloud Console 的 Authorized redirect URI 填：`https://<your-project>.supabase.co/auth/v1/callback`
-
-5. Notion Integration 設定（developers.notion.com/my-integrations）：
-   - 建立 Public Integration
-   - Redirect URI 填：`http://localhost:3000/api/notion/oauth/callback`（本機）與正式網域各一組
-   - 填妥隱私權政策、服務條款、support email（Public Integration 必填）
-
-## 部署到 Vercel
-- 在 Vercel Dashboard 分別設定 Production / Preview / Development 的環境變數
-- `SUPABASE_SERVICE_ROLE_KEY` 只設在 Server-side，絕不要加 `NEXT_PUBLIC_` 前綴
-- Notion redirect_uri 正式站需改為 `https://<你的網域>/api/notion/oauth/callback`，並同步在 Notion Integration 設定中新增
+這四層疊加起來，正常操作流程下，切換頁面應該幾乎沒有明顯等待感。

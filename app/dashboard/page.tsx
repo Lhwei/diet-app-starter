@@ -1,17 +1,23 @@
 import NavBar from '@/components/NavBar'
+import DashboardContent from '@/components/DashboardContent'
+import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
   return (
     <>
       <NavBar />
-      <main className="max-w-3xl mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold mb-4">飲食儀表板</h1>
-        <p className="text-gray-500 mb-6">
-          這裡之後會顯示每日熱量、營養素比例等健康儀表板圖表（資料由伺服器端彙整後回傳）。
-        </p>
-        <div className="border-2 border-dashed rounded-2xl p-10 text-center text-gray-400">
-          圖表開發中，敬請期待 📊
+      <main className="max-w-4xl mx-auto px-4 py-8 space-y-8">
+        <div>
+          <h1 className="text-2xl font-bold">健康儀表板</h1>
+          <p className="text-gray-400 text-sm mt-1">追蹤飲食、體重與身體組成的變化趨勢</p>
         </div>
+
+        <DashboardContent />
       </main>
     </>
   )

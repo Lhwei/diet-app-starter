@@ -14,6 +14,7 @@ export default async function SettingsPage() {
     .maybeSingle()
 
   const isConnected = connection?.status === 'connected'
+  const isInitCompleted = connection?.init_step === 'completed'
 
   return (
     <>
@@ -24,9 +25,27 @@ export default async function SettingsPage() {
         <section className="bg-white rounded-2xl shadow-sm p-6">
           <h2 className="font-semibold mb-3">Notion 連結狀態</h2>
           {isConnected ? (
-            <div className="space-y-1">
+            <div className="space-y-3">
               <p className="text-green-600 font-medium">✅ 已連結 Notion 工作區：{connection?.workspace_name ?? '未知'}</p>
               <p className="text-sm text-gray-500">初始化狀態：{connection?.init_step}</p>
+
+              {!isInitCompleted && (
+                <form action="/api/notion/init" method="POST">
+                  <button
+                    type="submit"
+                    className="inline-block bg-black text-white rounded-xl px-5 py-2.5 font-medium hover:opacity-90 transition"
+                  >
+                    建立 Notion 資料結構
+                  </button>
+                  <p className="text-sm text-gray-400 mt-2">
+                    會在你選取的頁面下自動建立「個人資料」「AI用PROMPT」「生理紀錄」「飲食紀錄」4 個物件
+                  </p>
+                </form>
+              )}
+
+              {isInitCompleted && (
+                <p className="text-sm text-gray-500">🎉 Notion 資料結構已建立完成，可以開始使用飲食紀錄功能了</p>
+              )}
             </div>
           ) : (
             <div className="space-y-3">

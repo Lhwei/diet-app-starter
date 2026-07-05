@@ -1,9 +1,9 @@
 import NavBar from '@/components/NavBar'
-import DietRecordList from '@/components/DietRecordList'
+import PhysioRecordList from '@/components/PhysioRecordList'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 
-export default async function DietPage() {
+export default async function PhysioPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -12,8 +12,8 @@ export default async function DietPage() {
     <>
       <NavBar />
       <main className="max-w-3xl mx-auto px-4 py-8 space-y-6">
-        <h1 className="text-2xl font-bold">飲食紀錄</h1>
-        <DietRecordList />
+        <h1 className="text-2xl font-bold">生理紀錄</h1>
+        <PhysioRecordList />
       </main>
     </>
   )

@@ -14,10 +14,12 @@ create table if not exists public.notion_connections (
   duplicated_template_id text,
   status text not null default 'connected', -- connected / revoked / error
   init_step text not null default 'pending', -- pending / page_created / databases_created / completed
-  personal_page_id text,
+  parent_page_id text, -- 使用者授權時選取的父層頁面
+  personal_db_id text, -- 個人資料改為 Database（原規格是 Page，因欄位含 Select/Number 改用 Database）
   ai_prompt_page_id text,
   physio_db_id text,
   diet_db_id text,
+  refreshing_since timestamptz, -- token 刷新鎖，防止併發刷新造成 refresh_token 輪替衝突
   updated_at timestamptz not null default now(),
   created_at timestamptz not null default now()
 );
