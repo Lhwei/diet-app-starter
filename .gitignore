@@ -8,7 +8,7 @@
 # 忽略 node_modules 資料夾及其所有內容
 .next/
 node_modules/
-supabase1/
+supabase/
 
 # 忽略 build 資料夾，但保留 build/specific_folder
 build/
