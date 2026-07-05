@@ -1,5 +1,14 @@
 // Notion API 呼叫封裝（伺服器端專用）
 // 統一處理 401 / 429 / 404 錯誤情境，符合規格文件的錯誤處理要求
+//
+// 本次更新：
+// 1. 401 自動觸發 forceRefreshNotionToken 刷新一次並重試，而不是直接拋錯讓功能中斷
+//    （呼叫端需傳入 userId，才能查到對應使用者的refresh_token去刷新）
+// 2. 新增 verifyDatabaseOwnership：CRUD前先確認page_id/database_id真的屬於該使用者，
+//    防止IDOR（跨使用者存取他人Notion資料）
+
+import { forceRefreshNotionToken } from './tokenManager'
+import { createServiceRoleClient } from '@/lib/supabase/server'
 
 const NOTION_API_BASE = 'https://api.notion.com/v1'
 const NOTION_VERSION = '2022-06-28'
@@ -12,19 +21,27 @@ export class NotionApiError extends Error {
   }
 }
 
+interface NotionFetchOptions extends RequestInit {
+  // 傳入userId才能在401時自動刷新token重試；不傳則401直接拋錯（例如初次OAuth流程還沒有存token時）
+  userId?: string
+}
+
 async function notionFetch(
   accessToken: string,
   path: string,
-  options: RequestInit = {},
-  retryCount = 0
+  options: NotionFetchOptions = {},
+  retryCount = 0,
+  hasRetriedAuth = false
 ): Promise<any> {
+  const { userId, ...fetchOptions } = options
+
   const res = await fetch(`${NOTION_API_BASE}${path}`, {
-    ...options,
+    ...fetchOptions,
     headers: {
       Authorization: `Bearer ${accessToken}`,
       'Notion-Version': NOTION_VERSION,
       'Content-Type': 'application/json',
-      ...(options.headers || {}),
+      ...(fetchOptions.headers || {}),
     },
   })
 
@@ -33,10 +50,16 @@ async function notionFetch(
     const retryAfter = parseInt(res.headers.get('Retry-After') || '1', 10)
     const backoffMs = Math.max(retryAfter * 1000, 2 ** retryCount * 500)
     await new Promise((resolve) => setTimeout(resolve, backoffMs))
-    return notionFetch(accessToken, path, options, retryCount + 1)
+    return notionFetch(accessToken, path, options, retryCount + 1, hasRetriedAuth)
   }
 
+  // 401：token失效。若有userId且尚未重試過，先刷新token再重試一次；
+  // 若沒有userId或已經重試過仍401，才真的拋錯讓上層導向重新授權
   if (res.status === 401) {
+    if (userId && !hasRetriedAuth) {
+      const newAccessToken = await forceRefreshNotionToken(userId)
+      return notionFetch(newAccessToken, path, options, retryCount, true)
+    }
     throw new NotionApiError('notion_token_invalid', 401)
   }
 
@@ -52,13 +75,54 @@ async function notionFetch(
   return res.json()
 }
 
+// ============================================
+// IDOR防護：CRUD操作前，先確認目標page_id真的屬於該使用者記錄的database_id
+// 規格5要求：「伺服器端必須驗證目標page_id所屬的database_id，
+// 是否等於該使用者資料表中記錄的『生理紀錄』或『飲食紀錄』database_id」
+// ============================================
+
+// 呼叫Notion API取得page所屬的database_id，再跟Supabase裡記錄的該使用者database_id比對
+export async function verifyPageOwnership(
+  accessToken: string,
+  userId: string,
+  pageId: string,
+  expectedDbType: 'diet' | 'physio'
+): Promise<void> {
+  const supabase = createServiceRoleClient()
+  const dbColumn = expectedDbType === 'diet' ? 'diet_db_id' : 'physio_db_id'
+
+  const { data: connection } = await supabase
+    .from('notion_connections')
+    .select(dbColumn)
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  const expectedDbId = (connection as any)?.[dbColumn]
+  if (!expectedDbId) {
+    throw new NotionApiError('notion_not_ready', 400)
+  }
+
+  const page = await retrievePage(accessToken, pageId)
+  const actualDbId = page?.parent?.database_id
+
+  // 這裡刻意用嚴格字串比對（去除破折號的normalize），避免Notion ID格式帶不帶dash造成誤判
+  const normalize = (id: string) => id?.replace(/-/g, '')
+
+  if (!actualDbId || normalize(actualDbId) !== normalize(expectedDbId)) {
+    // 不透露內部細節（例如實際的database_id是什麼），只回一個通用拒絕訊息
+    throw new NotionApiError('forbidden_resource_access', 403)
+  }
+}
+
 export function createPage(
   accessToken: string,
   parentPageId: string,
-  title: string
+  title: string,
+  userId?: string
 ) {
   return notionFetch(accessToken, '/pages', {
     method: 'POST',
+    userId,
     body: JSON.stringify({
       parent: { page_id: parentPageId },
       properties: {
@@ -72,10 +136,12 @@ export function createDatabase(
   accessToken: string,
   parentPageId: string,
   title: string,
-  properties: Record<string, any>
+  properties: Record<string, any>,
+  userId?: string
 ) {
   return notionFetch(accessToken, '/databases', {
     method: 'POST',
+    userId,
     body: JSON.stringify({
       parent: { type: 'page_id', page_id: parentPageId },
       title: [{ text: { content: title } }],
@@ -85,9 +151,10 @@ export function createDatabase(
 }
 
 // 取得使用者在授權時選取的父層頁面（Notion Search API，僅回傳授權範圍內的頁面）
-export function searchAccessiblePages(accessToken: string) {
+export function searchAccessiblePages(accessToken: string, userId?: string) {
   return notionFetch(accessToken, '/search', {
     method: 'POST',
+    userId,
     body: JSON.stringify({
       filter: { property: 'object', value: 'page' },
       page_size: 10,
@@ -96,21 +163,23 @@ export function searchAccessiblePages(accessToken: string) {
 }
 
 // 移至垃圾桶（軟刪除），對應規格文件「刪除＝移至 Notion 垃圾桶」
-export function trashPage(accessToken: string, pageId: string) {
+export function trashPage(accessToken: string, pageId: string, userId?: string) {
   return notionFetch(accessToken, `/pages/${pageId}`, {
     method: 'PATCH',
+    userId,
     body: JSON.stringify({ in_trash: true }),
   })
 }
 
-
 export function queryDatabase(
   accessToken: string,
   databaseId: string,
-  body: Record<string, any> = {}
+  body: Record<string, any> = {},
+  userId?: string
 ) {
   return notionFetch(accessToken, `/databases/${databaseId}/query`, {
     method: 'POST',
+    userId,
     body: JSON.stringify(body),
   })
 }
@@ -118,10 +187,12 @@ export function queryDatabase(
 export function createDatabasePage(
   accessToken: string,
   databaseId: string,
-  properties: Record<string, any>
+  properties: Record<string, any>,
+  userId?: string
 ) {
   return notionFetch(accessToken, '/pages', {
     method: 'POST',
+    userId,
     body: JSON.stringify({
       parent: { database_id: databaseId },
       properties,
@@ -132,14 +203,16 @@ export function createDatabasePage(
 export function updatePageProperties(
   accessToken: string,
   pageId: string,
-  properties: Record<string, any>
+  properties: Record<string, any>,
+  userId?: string
 ) {
   return notionFetch(accessToken, `/pages/${pageId}`, {
     method: 'PATCH',
+    userId,
     body: JSON.stringify({ properties }),
   })
 }
 
-export function retrievePage(accessToken: string, pageId: string) {
-  return notionFetch(accessToken, `/pages/${pageId}`)
+export function retrievePage(accessToken: string, pageId: string, userId?: string) {
+  return notionFetch(accessToken, `/pages/${pageId}`, { userId })
 }

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { getValidNotionAccessToken } from '@/lib/notion/tokenManager'
-import { queryDatabase, createDatabasePage, updatePageProperties, trashPage, NotionApiError } from '@/lib/notion/client'
+import { queryDatabase, createDatabasePage, updatePageProperties, trashPage, verifyPageOwnership, NotionApiError } from '@/lib/notion/client'
 import { notionPageToRecord, formValuesToNotionProperties } from '@/lib/notion/dietMapper'
 import { cachedQueryDatabase, invalidateDatabaseCache } from '@/lib/notion/queryCache'
 
@@ -128,9 +128,13 @@ export async function PUT(request: Request) {
 
   try {
     const accessToken = await getValidNotionAccessToken(result.userId)
+
+    // IDOR防護：確認這個pageId真的屬於該使用者記錄的飲食紀錄資料庫，不符合直接拒絕
+    await verifyPageOwnership(accessToken, result.userId, pageId, 'diet')
+
     const recordTitle = buildRecordTitle(values)
     const properties = formValuesToNotionProperties(values, recordTitle)
-    const page = await updatePageProperties(accessToken, pageId, properties)
+    const page = await updatePageProperties(accessToken, pageId, properties, result.userId)
 
     invalidateDatabaseCache(result.dietDbId)
 
@@ -159,7 +163,11 @@ export async function DELETE(request: Request) {
 
   try {
     const accessToken = await getValidNotionAccessToken(result.userId)
-    await trashPage(accessToken, pageId)
+
+    // IDOR防護：確認這個pageId真的屬於該使用者記錄的飲食紀錄資料庫，不符合直接拒絕
+    await verifyPageOwnership(accessToken, result.userId, pageId, 'diet')
+
+    await trashPage(accessToken, pageId, result.userId)
 
     invalidateDatabaseCache(result.dietDbId)
 

@@ -1,110 +1,124 @@
+// Notion Token 管理 — 讀寫都透過 Supabase Vault 加密存放
+//
+// 資安要求對照：
+// - access_token / refresh_token 絕不明文存入資料庫（規格7）
+// - 解密後的明文只能存在伺服器記憶體中臨時使用，用完即棄，不快取明文、不回傳前端、不寫log（規格7）
+// - 每次刷新後access_token跟refresh_token要整組覆蓋更新，不可只更新access_token（規格3）
+// - 需處理併發刷新，避免用到已輪替失效的舊refresh_token（規格3）
+
 import { createServiceRoleClient } from '@/lib/supabase/server'
-import { refreshNotionToken } from '@/lib/notion/oauth'
 
-// 併發安全的 Token 刷新機制
-//
-// 問題背景：
-// Notion 的 refresh_token 是「一次性」的——每次成功刷新後，Notion 會回傳一組新的
-// access_token + refresh_token，而「舊的」refresh_token 立刻失效。
-// 如果同一個使用者在短時間內觸發多個需要刷新 token 的請求（例如兩個 tab 同時操作），
-// 第一個請求刷新成功後，第二個請求若還拿著「舊的」refresh_token 去刷新，
-// Notion 會回應 invalid_grant 錯誤，導致該次請求失敗。
-//
-// 解法：single-flight 鎖 —— 用資料庫欄位當作鎖，確保同一個使用者同時只有一個刷新請求在執行，
-// 其他請求等待鎖釋放後，直接讀取已經刷新好的最新 token，不重複呼叫 Notion。
+interface NotionTokenPair {
+  accessToken: string
+  refreshToken: string
+}
 
-const LOCK_TTL_MS = 15_000 // 鎖的存活時間，避免刷新請求卡死導致永久鎖住
-const POLL_INTERVAL_MS = 300
-const MAX_WAIT_MS = 10_000
+// 進行中的刷新請求快取：同一個使用者短時間內多個請求同時觸發刷新時，
+// 讓後面的請求等待第一個刷新完成，直接共用結果，而不是各自拿舊refresh_token去刷新
+// （避免其中一個用到已經被輪替失效的refresh_token而報invalid_grant）
+const refreshInFlight = new Map<string, Promise<NotionTokenPair>>()
 
-export async function getValidNotionAccessToken(userId: string): Promise<string> {
-  const admin = createServiceRoleClient()
+// 讀取目前存放的token（已解密），只能在伺服器端呼叫
+async function getStoredTokens(userId: string): Promise<NotionTokenPair | null> {
+  const supabase = createServiceRoleClient()
+  const { data, error } = await supabase.rpc('get_notion_tokens', { p_user_id: userId })
 
-  const { data: connection, error } = await admin
-    .from('notion_connections')
-    .select('access_token, refresh_token, refreshing_since')
-    .eq('user_id', userId)
-    .single()
+  if (error || !data || data.length === 0) return null
 
-  if (error || !connection) {
-    throw new Error('notion_connection_not_found')
-  }
+  const row = data[0]
+  if (!row.access_token || !row.refresh_token) return null
 
-  const now = Date.now()
-  const lockActive =
-    connection.refreshing_since &&
-    now - new Date(connection.refreshing_since).getTime() < LOCK_TTL_MS
+  return { accessToken: row.access_token, refreshToken: row.refresh_token }
+}
 
-  if (lockActive) {
-    // 已經有另一個請求在刷新，等待它完成後直接讀取最新 token
-    return await waitForRefreshedToken(userId)
-  }
+// 寫入/更新token（自動加密），呼叫vault function
+async function storeTokens(userId: string, tokens: NotionTokenPair): Promise<void> {
+  const supabase = createServiceRoleClient()
+  const { error } = await supabase.rpc('set_notion_tokens', {
+    p_user_id: userId,
+    p_access_token: tokens.accessToken,
+    p_refresh_token: tokens.refreshToken,
+  })
 
-  // 嘗試取得刷新鎖：用「原本沒有鎖」當作 WHERE 條件，確保同時只有一個請求能搶到鎖
-  const { data: lockRow, error: lockError } = await admin
-    .from('notion_connections')
-    .update({ refreshing_since: new Date().toISOString() })
-    .eq('user_id', userId)
-    .is('refreshing_since', null)
-    .select()
-    .maybeSingle()
-
-  if (lockError) {
-    throw new Error('failed_to_acquire_refresh_lock')
-  }
-
-  if (!lockRow) {
-    // 沒搶到鎖，代表剛好有其他請求同時搶先一步，等待它完成
-    return await waitForRefreshedToken(userId)
-  }
-
-  // 搶到鎖，執行實際的刷新
-  try {
-    const tokenData = await refreshNotionToken(connection.refresh_token)
-
-    // 整組覆蓋更新 access_token / refresh_token，並釋放鎖
-    await admin
-      .from('notion_connections')
-      .update({
-        access_token: tokenData.access_token,
-        refresh_token: tokenData.refresh_token ?? connection.refresh_token,
-        refreshing_since: null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('user_id', userId)
-
-    return tokenData.access_token
-  } catch (e) {
-    // 刷新失敗（refresh_token 真的失效了）：釋放鎖，標記需要重新授權
-    await admin
-      .from('notion_connections')
-      .update({ refreshing_since: null, status: 'revoked' })
-      .eq('user_id', userId)
-    throw new Error('notion_refresh_failed_needs_reauth')
+  if (error) {
+    // 絕對不可以把tokens的內容印進錯誤訊息或log
+    throw new Error('token_storage_failed')
   }
 }
 
-async function waitForRefreshedToken(userId: string): Promise<string> {
-  const admin = createServiceRoleClient()
-  const start = Date.now()
+async function refreshNotionToken(refreshToken: string): Promise<NotionTokenPair> {
+  const response = await fetch('https://api.notion.com/v1/oauth/token', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Basic ${Buffer.from(
+        `${process.env.NOTION_CLIENT_ID}:${process.env.NOTION_CLIENT_SECRET}`
+      ).toString('base64')}`,
+    },
+    body: JSON.stringify({
+      grant_type: 'refresh_token',
+      refresh_token: refreshToken,
+    }),
+  })
 
-  while (Date.now() - start < MAX_WAIT_MS) {
-    await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS))
-
-    const { data: connection } = await admin
-      .from('notion_connections')
-      .select('access_token, refreshing_since, status')
-      .eq('user_id', userId)
-      .single()
-
-    if (connection?.status === 'revoked') {
-      throw new Error('notion_refresh_failed_needs_reauth')
-    }
-
-    if (!connection?.refreshing_since) {
-      return connection!.access_token
-    }
+  if (!response.ok) {
+    // 不可把回應內容整個log出來（可能含錯誤細節），只記錄狀態碼
+    throw new Error(`notion_refresh_failed_${response.status}`)
   }
 
-  throw new Error('notion_refresh_timeout')
+  const data = await response.json()
+
+  // Notion每次刷新都會回傳新的access_token跟refresh_token（refresh_token會輪替失效）
+  return {
+    accessToken: data.access_token,
+    refreshToken: data.refresh_token,
+  }
+}
+
+// 取得可用的Notion access token：若尚未過期直接回傳，過期則自動刷新並整組覆蓋更新
+// 呼叫端拿到的字串只能臨時使用於當次API呼叫，不可另外儲存
+export async function getValidNotionAccessToken(userId: string): Promise<string> {
+  const stored = await getStoredTokens(userId)
+
+  if (!stored) {
+    throw new Error('notion_not_connected')
+  }
+
+  // 先嘗試用現有access_token直接用（呼叫端遇到401會知道要重新走這個流程）
+  // 這裡簡化為：由呼叫端在拿到401時，呼叫下面的forceRefreshToken
+  return stored.accessToken
+}
+
+// 當Notion API回傳401時呼叫這個，強制刷新token
+// 用Map做in-flight去重複，確保同一個使用者同時間只會有一個真正的刷新請求打出去
+export async function forceRefreshNotionToken(userId: string): Promise<string> {
+  const existing = refreshInFlight.get(userId)
+  if (existing) {
+    const result = await existing
+    return result.accessToken
+  }
+
+  const refreshPromise = (async (): Promise<NotionTokenPair> => {
+    const stored = await getStoredTokens(userId)
+    if (!stored) throw new Error('notion_not_connected')
+
+    const newTokens = await refreshNotionToken(stored.refreshToken)
+    await storeTokens(userId, newTokens) // 整組覆蓋access+refresh，不只更新access
+
+    return newTokens
+  })()
+
+  refreshInFlight.set(userId, refreshPromise)
+
+  try {
+    const result = await refreshPromise
+    return result.accessToken
+  } finally {
+    refreshInFlight.delete(userId)
+  }
+}
+
+// 初次OAuth授權完成後，呼叫這個寫入第一組token
+export async function saveInitialNotionTokens(userId: string, tokens: NotionTokenPair): Promise<void> {
+  await storeTokens(userId, tokens)
 }

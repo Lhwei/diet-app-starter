@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { getValidNotionAccessToken } from '@/lib/notion/tokenManager'
-import { queryDatabase, createDatabasePage, updatePageProperties, trashPage, NotionApiError } from '@/lib/notion/client'
+import { queryDatabase, createDatabasePage, updatePageProperties, trashPage, verifyPageOwnership, NotionApiError } from '@/lib/notion/client'
 import { notionPageToPhysioRecord as notionPageToRecord, formValuesToPhysioProperties as formValuesToNotionProperties } from '@/lib/notion/physioMapper'
 import { cachedQueryDatabase, invalidateDatabaseCache } from '@/lib/notion/queryCache'
 
@@ -127,9 +127,12 @@ export async function PUT(request: Request) {
 
   try {
     const accessToken = await getValidNotionAccessToken(result.userId)
+
+    await verifyPageOwnership(accessToken, result.userId, pageId, 'physio')
+
     const recordTitle = buildRecordTitle(values)
     const properties = formValuesToNotionProperties(values, recordTitle)
-    const page = await updatePageProperties(accessToken, pageId, properties)
+    const page = await updatePageProperties(accessToken, pageId, properties, result.userId)
 
     invalidateDatabaseCache(result.physioDbId)
 
@@ -158,7 +161,10 @@ export async function DELETE(request: Request) {
 
   try {
     const accessToken = await getValidNotionAccessToken(result.userId)
-    await trashPage(accessToken, pageId)
+
+    await verifyPageOwnership(accessToken, result.userId, pageId, 'physio')
+
+    await trashPage(accessToken, pageId, result.userId)
 
     invalidateDatabaseCache(result.physioDbId)
 
