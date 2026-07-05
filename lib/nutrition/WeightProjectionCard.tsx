@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import LoadingSpinner from './LoadingSpinner'
+import LoadingSpinner from '../../components/LoadingSpinner'
 
 interface ProjectionData {
   currentWeight: number
