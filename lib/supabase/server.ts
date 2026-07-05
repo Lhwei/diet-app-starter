@@ -1,4 +1,4 @@
-import { createServerClient } from '@supabase/ssr'
+import { createServerClient, CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
 // Server Component / Route Handler / Server Action 用的 Supabase client
