@@ -31,7 +31,9 @@ function buildRecordTitle(values: Record<string, any>): string {
   return now.toLocaleString('zh-TW', { hour12: false })
 }
 
-// GET /api/physio?days=30  查詢近N天的生理紀錄，走快取
+// GET /api/physio?days=30              舊行為：查詢近N天的生理紀錄（設定頁摘要仍用這個模式），走快取
+// GET /api/physio?limit=50&cursor=xxx   新行為：分頁查詢（/physio 完整列表頁使用），不走days篩選，走快取
+// 兩種模式二選一：只要帶了 limit 參數，就走分頁模式；否則維持原本 days 模式
 export async function GET(request: Request) {
   const result = await getUserAndPhysioDbId()
   if ('error' in result) {
@@ -39,10 +41,38 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url)
-  const days = Number(searchParams.get('days') ?? 30)
+  const limitParam = searchParams.get('limit')
 
   try {
     const accessToken = await getValidNotionAccessToken(result.userId)
+
+    // 分頁模式：/physio 完整列表頁使用，超過50筆時前端會用 nextCursor 載入下一批
+    if (limitParam) {
+      const limit = Math.min(Number(limitParam) || 50, 100)
+      const cursor = searchParams.get('cursor') || undefined
+
+      const result_ = await cachedQueryDatabase(
+        ['db', result.physioDbId, 'physio-page', result.userId, limit, cursor ?? 'first'],
+        async () => {
+          const queryBody: Record<string, any> = {
+            sorts: [{ property: '記錄日期', direction: 'descending' }],
+            page_size: limit,
+          }
+          if (cursor) queryBody.start_cursor = cursor
+
+          const data = await queryDatabase(accessToken, result.physioDbId, queryBody)
+          return {
+            records: (data.results ?? []).map(notionPageToRecord),
+            nextCursor: data.has_more ? data.next_cursor : null,
+          }
+        }
+      )
+
+      return NextResponse.json(result_)
+    }
+
+    // 原本的days模式：設定頁「今天摘要」等場景繼續沿用，不受影響
+    const days = Number(searchParams.get('days') ?? 30)
 
     const records = await cachedQueryDatabase(
       ['db', result.physioDbId, 'physio-list', result.userId, days],

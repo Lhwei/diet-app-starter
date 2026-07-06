@@ -1,7 +1,7 @@
 // 飲食紀錄表單欄位設定：驅動表單 UI 與 Notion property 讀寫的單一設定來源
-// type 對應到 Notion property 型態：title / select / multi_select / number / rich_text
+// type 對應到 Notion property 型態：title / select / multi_select / number / rich_text / date
 
-export type DietFieldType = 'title' | 'select' | 'multi_select' | 'number' | 'rich_text'
+export type DietFieldType = 'title' | 'select' | 'multi_select' | 'number' | 'rich_text' | 'date'
 
 export interface DietFieldConfig {
   key: string // 前端表單用的 key（英文，方便 React state 操作）
@@ -38,3 +38,8 @@ export const dietFields: DietFieldConfig[] = [
   { key: 'scene', notionProp: '場景/來源', label: '場景/來源', type: 'select', options: ['自煮', '超商', '外食餐廳', '朋友聚餐'] },
   { key: 'note', notionProp: '備註', label: '備註', type: 'rich_text' },
 ]
+
+// 記錄日期：獨立於 dietFields 陣列之外處理，因為它不需要出現在表單UI上讓使用者填寫，
+// 而是在 dietMapper.ts 建立/更新紀錄時，自動依「記錄時間」title字串同步寫入這個真正的Date欄位，
+// 專門給 /api/diet?date=YYYY-MM-DD 這種單日篩選查詢使用（title類型的Notion property不支援date filter）
+export const dietRecordDateProp = '記錄日期'

@@ -1,50 +1,41 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+// 完整生理紀錄列表（/physio 頁面用）
+// 更新：改用分頁模式讀取(/api/physio?limit=50&cursor=xxx)，避免一次抓全部紀錄。
+// 超過50筆時，畫面下方會出現「載入更多」按鈕，點擊後串接下一批(cursor-based分頁)。
+// 不做日期篩選(隊長確認不需要)，純粹按「記錄日期」新到舊排序往下載入。
+
+import { useState, useCallback } from 'react'
 import PhysioRecordForm from './PhysioRecordForm'
 import LoadingSpinner from './LoadingSpinner'
+import { usePhysioRecordsPaginated } from '@/lib/hooks/useNotionData'
 
 export default function PhysioRecordList() {
-  const [records, setRecords] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const {
+    records,
+    isLoading,
+    isLoadingMore,
+    error,
+    hasMore,
+    loadMore,
+    refresh,
+  } = usePhysioRecordsPaginated(50)
+
   const [showForm, setShowForm] = useState(false)
   const [editingRecord, setEditingRecord] = useState<any | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
-  const fetchRecords = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const res = await fetch('/api/physio')
-      if (!res.ok) {
-        const body = await res.json()
-        throw new Error(body.error || '讀取失敗')
-      }
-      const data = await res.json()
-      setRecords(data.records)
-    } catch (err: any) {
-      setError(err.message)
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    fetchRecords()
-  }, [fetchRecords])
-
   function handleCreateSuccess() {
     setShowForm(false)
-    fetchRecords()
+    refresh()
   }
 
   function handleEditSuccess() {
     setEditingRecord(null)
-    fetchRecords()
+    refresh()
   }
 
-  async function handleDelete(id: string) {
+  const handleDelete = useCallback(async (id: string) => {
     if (!confirm('確定要刪除這筆紀錄嗎？（會移至 Notion 垃圾桶）')) return
     setDeletingId(id)
     try {
@@ -53,15 +44,15 @@ export default function PhysioRecordList() {
         const body = await res.json()
         throw new Error(body.error || '刪除失敗')
       }
-      setRecords((prev) => prev.filter((r) => r.id !== id))
+      refresh()
     } catch (err: any) {
       alert(err.message)
     } finally {
       setDeletingId(null)
     }
-  }
+  }, [refresh])
 
-  if (loading) return <LoadingSpinner />
+  if (isLoading && records.length === 0) return <LoadingSpinner />
 
   if (error === 'notion_not_ready') {
     return (
@@ -102,7 +93,7 @@ export default function PhysioRecordList() {
       )}
 
       <div className="space-y-3">
-        {records.map((record) => (
+        {records.map((record: any) => (
           <div key={record.id} className="bg-white rounded-2xl shadow-sm p-5 flex justify-between items-start">
             <div className="space-y-1">
               <p className="font-medium text-gray-400 text-sm">
@@ -134,6 +125,16 @@ export default function PhysioRecordList() {
           </div>
         ))}
       </div>
+
+      {hasMore && (
+        <button
+          onClick={loadMore}
+          disabled={isLoadingMore}
+          className="w-full rounded-xl border border-gray-300 px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+        >
+          {isLoadingMore ? '載入中...' : '載入更多'}
+        </button>
+      )}
     </div>
   )
 }

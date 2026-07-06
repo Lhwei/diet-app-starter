@@ -32,7 +32,18 @@ function buildRecordTitle(values: Record<string, any>): string {
   return now.toLocaleString('zh-TW', { hour12: false })
 }
 
-// GET /api/diet?days=30  查詢近N天的飲食紀錄，走快取（60秒內同樣的days參數重複查詢不重打Notion API）
+// 「記錄日期」是真正的Date類型欄位，供 /api/diet?date=YYYY-MM-DD 篩選查詢使用。
+// 新增時：若前端沒有明確帶recordDate，直接用目前時間（跟title同一個時間點）。
+// 編輯時：若前端有把既有的recordDate(ISO字串，來自notionPageToRecord)原封不動傳回來，就沿用原本日期，
+// 不會因為使用者「編輯」一筆舊紀錄而讓它的日期被誤改成今天。
+function buildRecordDateISO(values: Record<string, any>): string {
+  if (values.recordDate) return String(values.recordDate)
+  return new Date().toISOString()
+}
+
+// GET /api/diet?days=30       舊行為：查詢近N天的飲食紀錄，走快取（儀表板圖表使用）
+// GET /api/diet?date=2026-07-06  新行為：查詢單日飲食紀錄（App式週曆日檢視使用），走快取
+// 兩種模式二選一：只要帶了 date 參數，就走單日查詢；否則維持原本 days 模式
 export async function GET(request: Request) {
   const result = await getUserAndDietDbId()
   if ('error' in result) {
@@ -40,6 +51,56 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url)
+  const dateParam = searchParams.get('date')
+
+  if (dateParam) {
+    try {
+      const accessToken = await getValidNotionAccessToken(result.userId)
+
+      const records = await cachedQueryDatabase(
+        ['db', result.dietDbId, 'diet-daily', result.userId, dateParam],
+        async () => {
+          const dayStart = new Date(`${dateParam}T00:00:00`)
+          const dayEnd = new Date(`${dateParam}T23:59:59.999`)
+
+          let allRecords: any[] = []
+          let cursor: string | undefined = undefined
+          let hasMore = true
+          let pageCount = 0
+
+          while (hasMore && pageCount < 5) {
+            const queryBody: Record<string, any> = {
+              filter: {
+                and: [
+                  { property: '記錄日期', date: { on_or_after: dayStart.toISOString() } },
+                  { property: '記錄日期', date: { on_or_before: dayEnd.toISOString() } },
+                ],
+              },
+              sorts: [{ property: '記錄日期', direction: 'ascending' }],
+              page_size: 100,
+            }
+            if (cursor) queryBody.start_cursor = cursor
+
+            const data = await queryDatabase(accessToken, result.dietDbId, queryBody)
+            allRecords = allRecords.concat((data.results ?? []).map(notionPageToRecord))
+            hasMore = Boolean(data.has_more)
+            cursor = data.next_cursor
+            pageCount++
+          }
+
+          return allRecords
+        }
+      )
+
+      return NextResponse.json({ records, date: dateParam })
+    } catch (e) {
+      if (e instanceof NotionApiError) {
+        return NextResponse.json({ error: e.message }, { status: e.status })
+      }
+      return NextResponse.json({ error: 'query_failed', message: String(e) }, { status: 500 })
+    }
+  }
+
   const days = Number(searchParams.get('days') ?? 30)
 
   try {
@@ -98,7 +159,8 @@ export async function POST(request: Request) {
   try {
     const accessToken = await getValidNotionAccessToken(result.userId)
     const recordTitle = buildRecordTitle(body)
-    const properties = formValuesToNotionProperties(body, recordTitle)
+    const recordDateISO = buildRecordDateISO(body)
+    const properties = formValuesToNotionProperties(body, recordTitle, recordDateISO)
     const page = await createDatabasePage(accessToken, result.dietDbId, properties)
 
     invalidateDatabaseCache(result.dietDbId)
@@ -133,7 +195,8 @@ export async function PUT(request: Request) {
     await verifyPageOwnership(accessToken, result.userId, pageId, 'diet')
 
     const recordTitle = buildRecordTitle(values)
-    const properties = formValuesToNotionProperties(values, recordTitle)
+    const recordDateISO = buildRecordDateISO(values)
+    const properties = formValuesToNotionProperties(values, recordTitle, recordDateISO)
     const page = await updatePageProperties(accessToken, pageId, properties, result.userId)
 
     invalidateDatabaseCache(result.dietDbId)

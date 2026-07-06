@@ -80,3 +80,63 @@ export function useWeightProjection() {
     refresh: mutate,
   }
 }
+
+
+// ============================================
+// 分頁版本：/physio 完整列表頁使用，累積式載入（點「載入更多」時append到現有清單，不是換頁）
+// 用普通的useState管理累積結果，不直接用SWR的內建分頁功能，
+// 因為這裡需要「累積append」而不是「取代」的行為，邏輯更直覺
+// ============================================
+import { useState as useStateForPagination, useCallback as useCallbackForPagination, useEffect as useEffectForPagination } from 'react'
+
+export function usePhysioRecordsPaginated(pageSize: number = 50) {
+  const [records, setRecords] = useStateForPagination<any[]>([])
+  const [cursor, setCursor] = useStateForPagination<string | null>(null)
+  const [hasMore, setHasMore] = useStateForPagination(true)
+  const [isLoading, setIsLoading] = useStateForPagination(true)
+  const [isLoadingMore, setIsLoadingMore] = useStateForPagination(false)
+  const [error, setError] = useStateForPagination<string | null>(null)
+
+  const fetchPage = useCallbackForPagination(async (cursorParam: string | null, append: boolean) => {
+    if (append) setIsLoadingMore(true)
+    else setIsLoading(true)
+    setError(null)
+
+    try {
+      const url = new URL('/api/physio', window.location.origin)
+      url.searchParams.set('limit', String(pageSize))
+      if (cursorParam) url.searchParams.set('cursor', cursorParam)
+
+      const res = await fetch(url.toString().replace(window.location.origin, ''))
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({ error: 'query_failed' }))
+        throw new Error(body.error || 'query_failed')
+      }
+      const data = await res.json()
+
+      setRecords((prev) => (append ? [...prev, ...data.records] : data.records))
+      setCursor(data.nextCursor ?? null)
+      setHasMore(Boolean(data.nextCursor))
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setIsLoading(false)
+      setIsLoadingMore(false)
+    }
+  }, [pageSize])
+
+  useEffectForPagination(() => {
+    fetchPage(null, false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const loadMore = useCallbackForPagination(() => {
+    if (cursor && !isLoadingMore) fetchPage(cursor, true)
+  }, [cursor, isLoadingMore, fetchPage])
+
+  const refresh = useCallbackForPagination(() => {
+    fetchPage(null, false)
+  }, [fetchPage])
+
+  return { records, isLoading, isLoadingMore, error, hasMore, loadMore, refresh }
+}

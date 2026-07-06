@@ -1,9 +1,15 @@
-import { dietFields, DietFieldConfig } from './dietFieldsConfig'
+import { dietFields, DietFieldConfig, dietRecordDateProp } from './dietFieldsConfig'
 
 // 前端表單資料（key 為英文）轉換成 Notion page properties 格式
-export function formValuesToNotionProperties(values: Record<string, any>, recordTitle: string) {
+// recordTitle 目前約定格式是「YYYY/M/D 上午/下午HH:mm:ss」(toLocaleString('zh-TW'))
+// recordDateISO 是同一個時間點的ISO字串，寫入「記錄日期」這個真正的Date欄位，供 date filter 查詢使用
+export function formValuesToNotionProperties(values: Record<string, any>, recordTitle: string, recordDateISO?: string) {
   const properties: Record<string, any> = {
     '記錄時間': { title: [{ text: { content: recordTitle } }] },
+  }
+
+  if (recordDateISO) {
+    properties[dietRecordDateProp] = { date: { start: recordDateISO } }
   }
 
   for (const field of dietFields) {
@@ -40,6 +46,9 @@ export function notionPageToRecord(page: any) {
 
   const titleProp = props['記錄時間']
   record.recordTitle = titleProp?.title?.[0]?.plain_text ?? ''
+
+  const dateProp = props[dietRecordDateProp]
+  record.recordDate = dateProp?.date?.start ?? null
 
   for (const field of dietFields) {
     const prop = props[field.notionProp]
