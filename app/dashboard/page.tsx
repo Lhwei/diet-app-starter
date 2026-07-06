@@ -1,4 +1,3 @@
-import NavBar from '@/components/NavBar'
 import DashboardContent from '@/components/DashboardContent'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
@@ -10,7 +9,6 @@ export default async function DashboardPage() {
 
   return (
     <>
-      <NavBar />
       <main className="max-w-4xl mx-auto px-4 py-8 space-y-8">
         <div>
           <h1 className="text-2xl font-bold">健康儀表板</h1>

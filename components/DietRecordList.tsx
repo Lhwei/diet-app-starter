@@ -10,6 +10,7 @@ import WeekCalendarHeader from './WeekCalendarHeader'
 import DailyNutritionSummary from './DailyNutritionSummary'
 import SwipeableRecordCard from './SwipeableRecordCard'
 import { toDateKey } from '@/lib/date/weekUtils'
+import { useSearchParams, useRouter } from 'next/navigation'
 
 export default function DietRecordList() {
   const [selectedDate, setSelectedDate] = useState(() => new Date())
@@ -19,6 +20,16 @@ export default function DietRecordList() {
   const [showForm, setShowForm] = useState(false)
   const [editingRecord, setEditingRecord] = useState<any | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+
+  // 讓「飲食紀錄」「生理紀錄」頁面能被 ?new=1 觸發開表單
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  useEffect(() => {
+    if (searchParams.get('new') === '1') {
+      setShowForm(true)
+      router.replace('/diet')  // 清掉 query，避免重新整理又跳出表單
+    }
+  }, [searchParams])
 
   const dateKey = toDateKey(selectedDate)
 
@@ -103,17 +114,6 @@ export default function DietRecordList() {
         />
       ) : (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <button
-              onClick={() => setShowForm(true)}
-              className="bg-black text-white rounded-xl px-5 py-2.5 font-medium hover:opacity-90 transition"
-            >
-              + 新增飲食紀錄
-            </button>
-            {records.length > 0 && (
-              <p className="text-sm text-gray-500">當日總熱量：<strong>{totalCalories} kcal</strong></p>
-            )}
-          </div>
 
           {records.length === 0 && (
             <p className="text-gray-400">這天還沒有任何紀錄，點上面按鈕新增第一筆吧！</p>

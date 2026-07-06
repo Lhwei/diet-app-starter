@@ -1,4 +1,3 @@
-import NavBar from '@/components/NavBar'
 import TodayPhysioSummary from '@/components/TodayPhysioSummary'
 import ProfileMetricsSummary from '@/components/ProfileMetricsSummary'
 import LogoutButton from '@/components/LogoutButton'
@@ -23,7 +22,6 @@ export default async function SettingsPage() {
 
   return (
     <>
-      <NavBar />
       <main className="max-w-3xl mx-auto px-4 py-8 space-y-6">
         <h1 className="text-2xl font-bold">設定</h1>
 

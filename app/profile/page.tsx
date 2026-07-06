@@ -1,4 +1,3 @@
-import NavBar from '@/components/NavBar'
 import ProfilePageContainer from '@/components/ProfilePageContainer'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
@@ -10,7 +9,6 @@ export default async function ProfilePage() {
 
   return (
     <>
-      <NavBar />
       <main className="max-w-3xl mx-auto px-4 py-8 space-y-6">
         <div>
           <h1 className="text-2xl font-bold">個人資料</h1>
