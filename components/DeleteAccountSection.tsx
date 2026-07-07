@@ -50,7 +50,7 @@ export default function DeleteAccountSection() {
 
       <p className="text-sm text-gray-600 font-medium">
         請注意：您Notion workspace中原有的頁面與資料庫（個人資料、生理紀錄、飲食紀錄等）
-        <span className="text-red-600">不會被刪除</span>，仍會保留在您自己的Notion帳戶中，
+        <span className="text-red-600">不會被刪除</span>，仍會保留在您自己的notion帳號中，
         本App僅移除連結與存取權限。
       </p>
 

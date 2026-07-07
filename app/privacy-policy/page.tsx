@@ -51,7 +51,7 @@ export default function PrivacyPolicyPage() {
       <section className="space-y-2">
         <h2 className="text-lg font-semibold text-gray-900">6. 您的權利</h2>
         <p>
-          您可以隨時在帳戶設定頁面中刪除您的帳號，此操作會清除您在本App資料庫中儲存的所有紀錄
+          您可以隨時在帳號設定頁面中刪除您的帳號，此操作會清除您在本App資料庫中儲存的所有紀錄
           與加密授權憑證。請注意：您Notion workspace中原有的頁面與資料庫內容不受本App控制，
           刪除帳號不會刪除您Notion中已存在的實際資料，如需刪除請直接於Notion中操作。
         </p>

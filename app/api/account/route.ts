@@ -87,6 +87,6 @@ export async function DELETE() {
 
   return NextResponse.json({
     success: true,
-    message: '帳號與App內資料已刪除。請注意：您Notion workspace中原有的內容不受本App控制，仍會保留在您的Notion帳戶中。',
+    message: '帳號與App內資料已刪除。請注意：您Notion workspace中原有的內容不受本App控制，仍會保留在您的notion帳號中。',
   })
 }
