@@ -16,7 +16,8 @@ import { calculateNutritionFromServings, foodGroupNutrition, suggestMealTypeByTi
 
 interface DietRecordFormProps {
   initialValues?: Record<string, any>
-  onSaved: () => void
+  recordId?: string
+  onSuccess: () => void
   onCancel: () => void
 }
 
@@ -153,7 +154,7 @@ function ServingStepper({
   )
 }
 
-export default function DietRecordForm({ initialValues, onSaved, onCancel }: DietRecordFormProps) {
+export default function DietRecordForm({ initialValues, onSuccess, onCancel }: DietRecordFormProps) {
   const isEditing = Boolean(initialValues?.id)
 
   const [values, setValues] = useState<Record<string, any>>(() => ({
@@ -210,7 +211,7 @@ export default function DietRecordForm({ initialValues, onSaved, onCancel }: Die
         throw new Error(errBody.error || '儲存失敗')
       }
 
-      onSaved()
+      onSuccess()
     } catch (err: any) {
       setError(err.message || '發生錯誤，請稍後再試')
     } finally {

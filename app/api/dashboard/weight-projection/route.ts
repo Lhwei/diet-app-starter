@@ -53,7 +53,11 @@ export async function GET() {
           records = records.concat(pageRecords)
 
           const oldest = pageRecords[pageRecords.length - 1]
-          hasMore = data.has_more && oldest && new Date(oldest.createdTime) > sinceDate
+          // 改用「記錄日期」(recordDate) 判斷是否已經超出90天範圍，不再用 createdTime。
+          // 記錄日期現在可能被手動改成過去的日期（補登舊報告），createdTime跟記錄日期會脫鉤，
+          // 用 createdTime 篩選會錯誤納入/排除紀錄，導致週平均算出從未真正填寫過的數字。
+          const oldestDate = oldest ? new Date(oldest.recordDate) : null
+          hasMore = data.has_more && oldestDate !== null && !isNaN(oldestDate.getTime()) && oldestDate > sinceDate
           cursor = data.next_cursor
           pageCount++
         }
@@ -62,7 +66,10 @@ export async function GET() {
       }
     )
 
-    const filtered = allRecords.filter((r: any) => new Date(r.createdTime) > sinceDate)
+    const filtered = allRecords.filter((r: any) => {
+      const d = new Date(r.recordDate)
+      return !isNaN(d.getTime()) && d > sinceDate
+    })
     const weeklyPoints = bucketWeightByWeek(filtered)
 
     const profileData = await cachedQueryDatabase(
@@ -77,7 +84,12 @@ export async function GET() {
 
     const props = profilePage.properties
     const targetWeight = props?.['目標體重(kg)']?.number ?? null
-    const latestWeightFromPhysio = weeklyPoints.length > 0 ? weeklyPoints[weeklyPoints.length - 1].avgWeight : null
+    // 直接取「記錄日期最新」那一筆的原始體重數字，不用任何平均值，
+    // 避免使用者在畫面上看到一個自己從未真正填寫過的計算結果
+    const latestRecordWithWeight = [...filtered]
+      .filter((r: any) => r.weight !== undefined && r.weight !== null)
+      .sort((a: any, b: any) => new Date(b.recordDate).getTime() - new Date(a.recordDate).getTime())[0]
+    const latestWeightFromPhysio = latestRecordWithWeight?.weight ?? null
     const startWeight = props?.['起始體重(kg)']?.number ?? null
     const currentWeight = latestWeightFromPhysio ?? startWeight
 
@@ -96,7 +108,6 @@ export async function GET() {
         await updatePageProperties(accessToken, profilePage.id, {
           '目標達成日期': { date: { start: projection.projectedDate } },
         })
-        // 寫入目標達成日期後，個人資料庫的內容變了，清掉快取讓下次讀取拿到最新的
         invalidateDatabaseCache(connection.personal_db_id)
       } catch (writeErr) {
         writeBackError = writeErr instanceof NotionApiError ? writeErr.message : String(writeErr)

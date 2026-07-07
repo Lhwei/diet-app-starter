@@ -24,16 +24,29 @@ async function getUserAndPhysioDbId() {
   return { userId: user.id, physioDbId: connection.physio_db_id as string }
 }
 
-// 「記錄日期」是Notion資料庫的title欄位，這裡統一產生一個可讀的標題字串
 function buildRecordTitle(values: Record<string, any>): string {
   if (values.recordDate) return String(values.recordDate)
   const now = new Date()
-  return now.toLocaleString('zh-TW', { hour12: false })
+  return now.toISOString()
+}
+
+// 記錄日期曾經用中文格式(toLocaleString)存過，現已改成ISO格式，兩種格式混在一起時
+// 用文字排序(Notion API的title排序)或直接new Date()比較都可能得到錯亂的順序。
+// 這裡在回傳前一律用「能被正確解析的時間」重新排序，無法解析的舊格式紀錄視為最舊，排到最後面，
+// 不會插隊打亂正常排序，但也不會讓程式crash。
+function recordSortKey(record: any): number {
+  const t = new Date(record.recordDate).getTime()
+  return isNaN(t) ? -Infinity : t
+}
+
+function sortRecordsByDateDesc(records: any[]): any[] {
+  return [...records].sort((a, b) => recordSortKey(b) - recordSortKey(a))
 }
 
 // GET /api/physio?days=30              舊行為：查詢近N天的生理紀錄（設定頁摘要仍用這個模式），走快取
-// GET /api/physio?limit=50&cursor=xxx   新行為：分頁查詢（/physio 完整列表頁使用），不走days篩選，走快取
-// 兩種模式二選一：只要帶了 limit 參數，就走分頁模式；否則維持原本 days 模式
+// GET /api/physio?limit=50&cursor=xxx   新行為：分頁查詢（/physio 完整列表頁使用）
+// 分頁模式改成「不走快取，每次都直接向Notion拿最新資料」，確保重新整理頁面(F5)一定看到最新紀錄，
+// 不會因為短TTL快取還沒過期而顯示舊資料
 export async function GET(request: Request) {
   const result = await getUserAndPhysioDbId()
   if ('error' in result) {
@@ -46,32 +59,26 @@ export async function GET(request: Request) {
   try {
     const accessToken = await getValidNotionAccessToken(result.userId)
 
-    // 分頁模式：/physio 完整列表頁使用，超過50筆時前端會用 nextCursor 載入下一批
     if (limitParam) {
       const limit = Math.min(Number(limitParam) || 50, 100)
       const cursor = searchParams.get('cursor') || undefined
 
-      const result_ = await cachedQueryDatabase(
-        ['db', result.physioDbId, 'physio-page', result.userId, limit, cursor ?? 'first'],
-        async () => {
-          const queryBody: Record<string, any> = {
-            sorts: [{ property: '記錄日期', direction: 'descending' }],
-            page_size: limit,
-          }
-          if (cursor) queryBody.start_cursor = cursor
+      const queryBody: Record<string, any> = {
+        sorts: [{ property: '記錄日期', direction: 'descending' }],
+        page_size: limit,
+      }
+      if (cursor) queryBody.start_cursor = cursor
 
-          const data = await queryDatabase(accessToken, result.physioDbId, queryBody)
-          return {
-            records: (data.results ?? []).map(notionPageToRecord),
-            nextCursor: data.has_more ? data.next_cursor : null,
-          }
-        }
-      )
+      const data = await queryDatabase(accessToken, result.physioDbId, queryBody)
+      const pageRecords = sortRecordsByDateDesc((data.results ?? []).map(notionPageToRecord))
 
-      return NextResponse.json(result_)
+      return NextResponse.json({
+        records: pageRecords,
+        nextCursor: data.has_more ? data.next_cursor : null,
+      })
     }
 
-    // 原本的days模式：設定頁「今天摘要」等場景繼續沿用，不受影響
+    // 原本的days模式：設定頁「今天摘要」等場景繼續沿用，維持走快取
     const days = Number(searchParams.get('days') ?? 30)
 
     const records = await cachedQueryDatabase(
@@ -97,12 +104,18 @@ export async function GET(request: Request) {
           allRecords = allRecords.concat(pageRecords)
 
           const oldest = pageRecords[pageRecords.length - 1]
-          hasMore = data.has_more && oldest && new Date(oldest.createdTime) > sinceDate
+          const oldestTime = oldest ? new Date(oldest.recordDate).getTime() : NaN
+          hasMore = data.has_more && !isNaN(oldestTime) && oldestTime > sinceDate.getTime()
           cursor = data.next_cursor
           pageCount++
         }
 
-        return allRecords.filter((r) => new Date(r.createdTime) > sinceDate)
+        return sortRecordsByDateDesc(
+          allRecords.filter((r) => {
+            const t = new Date(r.recordDate).getTime()
+            return !isNaN(t) && t > sinceDate.getTime()
+          })
+        )
       }
     )
 

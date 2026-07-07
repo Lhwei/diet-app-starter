@@ -1,4 +1,7 @@
+'use client'
+
 import Link from 'next/link'
+import DesktopAddButton from './DesktopAddButton'
 
 const links = [
   { href: '/profile', label: '個人資料' },
@@ -13,7 +16,7 @@ export default function NavBar() {
     <nav className="hidden sm:block w-full border-b bg-white sticky top-0 z-10">
       <div className="max-w-3xl mx-auto flex items-center justify-between px-4 py-3">
         <span className="font-bold text-lg">🥗 飲食管理小幫手</span>
-        <div className="flex gap-1 sm:gap-4 text-sm">
+        <div className="flex items-center gap-1 sm:gap-4 text-sm">
           {links.map((l) => (
             <Link
               key={l.href}
@@ -23,6 +26,7 @@ export default function NavBar() {
               {l.label}
             </Link>
           ))}
+          <DesktopAddButton />
         </div>
       </div>
     </nav>
