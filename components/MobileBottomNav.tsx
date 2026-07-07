@@ -81,7 +81,7 @@ export default function MobileBottomNav() {
 
   return (
     <>
-      <nav className="sm:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-gray-200 pb-[env(safe-area-inset-bottom)]">
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-gray-200 pb-[env(safe-area-inset-bottom)]">
         <div className="flex items-stretch justify-between px-1">
           {navItems.map((item) => {
             if (item.key === 'add') {

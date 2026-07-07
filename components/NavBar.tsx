@@ -4,10 +4,8 @@ import Link from 'next/link'
 import DesktopAddButton from './DesktopAddButton'
 
 const links = [
-  { href: '/profile', label: '個人資料' },
   { href: '/diet', label: '飲食紀錄' },
-  { href: '/physio', label: '生理紀錄' },
-  { href: '/dashboard', label: '飲食儀表板' },
+  { href: '/dashboard', label: '儀表板' },
   { href: '/settings', label: '設定' },
 ]
 

@@ -1,7 +1,7 @@
 import './globals.css'
 import type { Metadata } from 'next'
-import MobileBottomNav from '@/components/MobileBottomNav'
-import NavBar from '@/components/NavBar'
+import ConditionalBottomNav from '@/components/ConditionalBottomNav'
+import ConditionalNavbar from '@/components/ConditionalNavbar'
 
 export const metadata: Metadata = {
   title: '飲食管理小幫手',
@@ -11,9 +11,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="zh-Hant">
-      <NavBar />
-      <body className="bg-gray-50 text-gray-900 antialiased pb-20">{children}</body>
-      <MobileBottomNav />
+      <ConditionalNavbar />
+      <body className="bg-gray-50 text-gray-900 antialiased">{children}</body>
+      <ConditionalBottomNav />
     </html>
   )
 }
