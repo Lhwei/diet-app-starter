@@ -56,15 +56,6 @@ export default function PrivacyPolicyPage() {
           刪除帳號不會刪除您Notion中已存在的實際資料，如需刪除請直接於Notion中操作。
         </p>
       </section>
-
-      <section className="space-y-2">
-        <h2 className="text-lg font-semibold text-gray-900">7. 聯絡我們</h2>
-        <p>
-          若您對本隱私權政策有任何疑問，或希望行使前述權利，請透過
-          <a href="mailto:support@example.com" className="text-blue-600 underline">support@example.com</a>
-          與我們聯繫。
-        </p>
-      </section>
     </main>
   )
 }
