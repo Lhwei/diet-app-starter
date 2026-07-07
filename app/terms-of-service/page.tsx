@@ -51,6 +51,14 @@ export default function TermsOfServicePage() {
         </p>
       </section>
 
+      <section className="space-y-2">
+        <h2 className="text-lg font-semibold text-gray-900">7. 聯絡我們</h2>
+        <p>
+          若您對本服務條款有任何疑問，請透過
+          <a href="https://www.threads.com/@wei1216iew" className="text-blue-600 underline">Threads</a>
+          聯繫。
+        </p>
+      </section>
     </main>
   )
 }
