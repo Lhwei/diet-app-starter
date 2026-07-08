@@ -97,6 +97,7 @@ export async function POST(request: Request) {
 
     return NextResponse.redirect(`${origin}/settings?notion_init=completed`, 303)
   } catch (e) {
+    console.error('[notion-init] 失敗:', e)   // ← 加這行
     if (e instanceof NotionApiError && e.status === 401) {
       await admin.from('notion_connections').update({ status: 'revoked' }).eq('user_id', user.id)
       return NextResponse.redirect(`${origin}/settings?notion_error=token_invalid`, 303)

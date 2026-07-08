@@ -118,6 +118,7 @@ export const physioRecordSchema: NotionPropertySchema = {
 // 註：「照片」欄位（Files & media）第一版先跳過，之後需要 Notion 檔案上傳流程支援後再加
 export const dietRecordSchema: NotionPropertySchema = {
   '記錄時間': { title: {} },
+  '記錄日期': { date: {} },
   'user_id': { rich_text: {} },
   '餐別': {
     select: { options: [{ name: '早餐' }, { name: '午餐' }, { name: '晚餐' }, { name: '點心' }, { name: '宵夜' }] },

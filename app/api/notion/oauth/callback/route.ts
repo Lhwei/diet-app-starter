@@ -1,17 +1,33 @@
 import { NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { exchangeNotionCode } from '@/lib/notion/oauth'
+import { saveInitialNotionTokens } from '@/lib/notion/tokenManager'
 
-// 這個 route 對應 Notion Integration 設定裡填的 Redirect URI：
+// 這個route對應Notion Integration設定裡填的Redirect URI：
 // http://localhost:3000/api/notion/oauth/callback
-// 正式站要記得在 Notion Integration 設定裡再加一組正式網域的版本
+// 正式站要記得在Notion Integration設定裡再加一組正式網域的版本
+//
+// 本次修正（根本bug，執行順序問題）：
+// set_notion_tokens這個RPC內部邏輯是：
+//   1. SELECT access_token_key_id/refresh_token_key_id FROM notion_connections WHERE user_id=...
+//   2. 若為NULL就vault.create_secret建立新密鑰
+//   3. UPDATE notion_connections SET access_token_key_id=... WHERE user_id=...
+// 原本這裡的呼叫順序是「先saveInitialNotionTokens，再upsert notion_connections」，
+// 導致第一次授權時，步驟1執行的當下notion_connections裡還沒有這個user_id的資料列，
+// 步驟3的UPDATE因此靜默更新0筆（Postgres對UPDATE找不到符合條件的列不會報錯），
+// key_id永遠沒有被寫回notion_connections。
+// 使用者重試授權時，步驟1的SELECT再次找到NULL，又嘗試vault.create_secret，
+// 用同樣的description二次建立密鑰，撞上Vault底層unique constraint而丟出例外，
+// 導致saveInitialNotionTokens拋出token_storage_failed。
+//
+// 修正：把「upsert notion_connections」移到「saveInitialNotionTokens」之前，
+// 確保set_notion_tokens執行時，該使用者的資料列已經存在，UPDATE才能真正生效。
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
   const state = searchParams.get('state')
-  const errorParam = searchParams.get('error') // 使用者在 Notion 授權畫面按「取消」時會帶這個
+  const errorParam = searchParams.get('error') // 使用者在Notion授權畫面按「取消」時會帶這個
 
-  // 1. 使用者拒絕授權的情況，優雅處理，不要顯示原始錯誤
   if (errorParam) {
     return NextResponse.redirect(`${origin}/settings?notion_error=user_denied`)
   }
@@ -20,7 +36,6 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${origin}/settings?notion_error=missing_params`)
   }
 
-  // 2. 確認目前有登入的 Supabase 使用者（callback 必須在已登入狀態下發生）
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -30,7 +45,6 @@ export async function GET(request: Request) {
 
   const admin = createServiceRoleClient()
 
-  // 3. 驗證 state：必須存在、屬於目前使用者、未過期、未被使用過（防 CSRF / replay）
   const { data: stateRow, error: stateError } = await admin
     .from('oauth_states')
     .select('*')
@@ -44,41 +58,53 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${origin}/settings?notion_error=invalid_state`)
   }
 
-  // 4. 立即標記該 state 已使用，避免同一組 code/state 被重複兌換
   await admin
     .from('oauth_states')
     .update({ used_at: new Date().toISOString() })
     .eq('state', state)
 
-  // 5. 用 code 向 Notion 換 access_token / refresh_token（僅在伺服器端進行）
   try {
     const tokenData = await exchangeNotionCode(code)
 
-    // 6. 整組覆蓋寫入，之後刷新 token 時也必須整組覆蓋，不可只更新 access_token
+    if (!tokenData.refresh_token) {
+      console.error('[notion-oauth-callback] 未取得refresh_token，中止流程')
+      return NextResponse.redirect(`${origin}/settings?notion_error=token_exchange_failed`)
+    }
+
+    // 1. 先upsert notion_connections的metadata，確保這個user_id的資料列先存在，
+    //    這樣set_notion_tokens內部的SELECT/UPDATE才能正確對應到同一列，
+    //    不會因為列不存在導致UPDATE靜默失敗、key_id永遠沒被記錄回去
     const { error: upsertError } = await admin
       .from('notion_connections')
       .upsert(
         {
           user_id: user.id,
-          access_token: tokenData.access_token,
-          refresh_token: tokenData.refresh_token ?? null,
           bot_id: tokenData.bot_id,
           workspace_id: tokenData.workspace_id,
           workspace_name: tokenData.workspace_name,
           duplicated_template_id: tokenData.duplicated_template_id ?? null,
           status: 'connected',
-          init_step: 'pending', // 下一步交給 /api/notion/init 建立 4 個物件
+          init_step: 'pending', // 下一步交給/api/notion/init建立4個物件
           updated_at: new Date().toISOString(),
         },
         { onConflict: 'user_id' }
       )
 
     if (upsertError) {
+      console.error('[notion-oauth-callback] notion_connections寫入失敗:', upsertError)
       return NextResponse.redirect(`${origin}/settings?notion_error=save_failed`)
     }
 
+    // 2. 資料列已存在，這時才呼叫set_notion_tokens，
+    //    內部的SELECT會找到這一列（key_id目前為NULL），CREATE密鑰後的UPDATE才能真正生效
+    await saveInitialNotionTokens(user.id, {
+      accessToken: tokenData.access_token,
+      refreshToken: tokenData.refresh_token,
+    })
+
     return NextResponse.redirect(`${origin}/settings?notion=connected`)
   } catch (e) {
+    console.error('[notion-oauth-callback] token交換或Vault寫入失敗:', e instanceof Error ? e.message : e)
     return NextResponse.redirect(`${origin}/settings?notion_error=token_exchange_failed`)
   }
 }
