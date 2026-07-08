@@ -1,7 +1,15 @@
 import './globals.css'
 import type { Metadata } from 'next'
+import type { Viewport } from 'next'
 import ConditionalBottomNav from '@/components/ConditionalBottomNav'
 import ConditionalNavbar from '@/components/ConditionalNavbar'
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+}
 
 export const metadata: Metadata = {
   title: '飲食管理小幫手',
