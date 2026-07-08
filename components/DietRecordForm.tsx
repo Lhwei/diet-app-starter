@@ -13,6 +13,7 @@
 import { useEffect, useState } from 'react'
 import { dietFields } from '@/lib/notion/dietFieldsConfig'
 import { calculateNutritionFromServings, foodGroupNutrition, suggestMealTypeByTime } from '@/lib/nutrition/foodGroupNutrition'
+import PortionGuideHint from '@/components/PortionGuideHint'
 
 interface DietRecordFormProps {
   initialValues?: Record<string, any>
@@ -257,6 +258,7 @@ export default function DietRecordForm({ initialValues, onSuccess, onCancel }: D
         <div>
           <h3 className="text-sm font-semibold text-gray-900">六大類食物（份）</h3>
           <p className="text-xs text-gray-400 mt-0.5">用按鈕以0.5份為單位調整，也可以直接點輸入框手動輸入</p>
+          <PortionGuideHint />
         </div>
         <div className="grid grid-cols-2 gap-4">
           {foodGroupNutrition.map((group) => (
