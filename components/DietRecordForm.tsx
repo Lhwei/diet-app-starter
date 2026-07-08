@@ -7,8 +7,12 @@
 // 2. 六大類食物份數改用 +/- 按鈕（一次0.5份），同時保留輸入框可直接手動輸入任意數字
 // 3. 原本的下拉式 <select>（餐別/飽足感/油脂感知/精神睏意/量測方式/場景來源）全部改成
 //    「點擊式選項卡」（外觀類似 multi_select 的 chip group，但仍是單選 select 語意）
-// 4. 資訊層級重新分區：基本資訊 → 六大類食物 → 營養小計(自動計算,只讀) → 補充生理數值 → 身心感知 → 情境與備註
-//    每個分區用小標題 + 說明文字區隔，讀取重要性依序遞減
+// 4. 資訊層級重新分區：記錄日期時間 → 基本資訊 → 六大類食物 → 營養小計(自動計算,只讀)
+//    → 補充生理數值 → 身心感知 → 情境與備註，每個分區用小標題 + 說明文字區隔
+// 5. 新增「記錄日期時間」欄位（比照PhysioRecordForm.tsx的做法），預設為目前時間，
+//    可手動改成過去日期時間，方便補登之前吃的一餐。改用datetime-local + ISO字串儲存，
+//    理由跟生理紀錄相同：中文格式（toLocaleString('zh-TW')）無法被new Date()正確解析，
+//    也無法用文字排序反映正確時間順序，會導致依日期篩選/排序全部失準。
 
 import { useEffect, useState } from 'react'
 import { dietFields } from '@/lib/notion/dietFieldsConfig'
@@ -23,6 +27,19 @@ interface DietRecordFormProps {
 }
 
 const fieldByKey = Object.fromEntries(dietFields.map((f) => [f.key, f]))
+
+// datetime-local input 需要 "YYYY-MM-DDTHH:mm" 格式，這裡做雙向轉換
+// 允許使用者手動改成過去的日期時間（例如補登之前吃的一餐），不需要另開新欄位
+function toDateTimeInputValue(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
+function parseRecordDate(value: any): Date {
+  if (!value) return new Date()
+  const parsed = new Date(value)
+  return isNaN(parsed.getTime()) ? new Date() : parsed
+}
 
 function SingleChipSelect({
   label,
@@ -162,6 +179,9 @@ export default function DietRecordForm({ initialValues, onSuccess, onCancel }: D
     mealType: suggestMealTypeByTime(),
     ...initialValues,
   }))
+  const [recordDateTime, setRecordDateTime] = useState<string>(() =>
+    toDateTimeInputValue(parseRecordDate(initialValues?.recordDate))
+  )
   const [mealTypeTouched, setMealTypeTouched] = useState(isEditing)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -189,8 +209,13 @@ export default function DietRecordForm({ initialValues, onSuccess, onCancel }: D
     setError(null)
 
     try {
+      // recordDate 改用 ISO 格式（YYYY-MM-DDTHH:mm:ss）傳給後端，理由跟生理紀錄相同：
+      // 中文格式無法被 new Date() 正確解析、也無法用文字排序反映正確時間順序。
+      // 後端 dietMapper.ts 需要改成優先採用這個 recordDate 來組「記錄時間」title字串與
+      // 「記錄日期」Date欄位，而不是一律用伺服器收到請求當下的 now()。
       const payload = {
         ...values,
+        recordDate: parseRecordDate(recordDateTime).toISOString(),
         protein: computed.protein,
         fat: computed.fat,
         carb: computed.carb,
@@ -223,6 +248,18 @@ export default function DietRecordForm({ initialValues, onSuccess, onCancel }: D
   return (
     <form onSubmit={handleSubmit} className="space-y-7">
       {error && <div className="bg-red-50 text-red-600 text-sm rounded-lg px-4 py-2">{error}</div>}
+
+      {/* 記錄日期時間：預設為目前時間，可手動改成過去日期時間，方便補登之前吃的一餐 */}
+      <section className="space-y-2">
+        <label className="block text-sm font-medium text-gray-700">記錄日期時間</label>
+        <input
+          type="datetime-local"
+          value={recordDateTime}
+          onChange={(e) => setRecordDateTime(e.target.value)}
+          className="w-full sm:w-auto text-sm rounded-lg border border-gray-300 px-3 py-2"
+        />
+        <p className="text-xs text-gray-400">預設為目前時間，若要補登之前吃的一餐，可以手動改成實際用餐的日期時間</p>
+      </section>
 
       <section className="space-y-4">
         <SingleChipSelect

@@ -32,6 +32,16 @@ function buildRecordDateISO(values: Record<string, any>): string {
   return new Date().toISOString()
 }
 
+// 「記錄時間」是Notion資料庫的title欄位。修正重點：
+// 原本PATCH直接用 body.recordTitle，若前端沒有傳這個欄位（目前DietRecordForm.tsx確實沒有傳），
+// title會被寫成空字串，等於整筆紀錄在Notion列表裡顯示成沒有標題。
+// 現在改成：優先用 recordTitle；沒有的話，依 recordDateISO 對應的時間點組標題，
+// 跟 app/api/diet/route.ts 的邏輯保持一致，確保title字串跟「記錄日期」欄位永遠是同一個時間點。
+function buildRecordTitle(values: Record<string, any>, recordDateISO: string): string {
+  if (values.recordTitle) return String(values.recordTitle)
+  return new Date(recordDateISO).toLocaleString('zh-TW', { hour12: false })
+}
+
 // GET /api/diet/[id] — 查詢單筆紀錄詳情
 export async function GET(
   _request: Request,
@@ -61,7 +71,6 @@ export async function GET(
 }
 
 // PATCH /api/diet/[id] — 修改紀錄
-// 補齊：IDOR防護、記錄日期同步寫入、更新後清除快取（原版本這三項都缺）
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -73,7 +82,6 @@ export async function PATCH(
 
   const { id } = await params
   const body = await request.json()
-  const recordTitle = body.recordTitle
 
   try {
     const accessToken = await getValidNotionAccessToken(result.userId)
@@ -82,6 +90,7 @@ export async function PATCH(
     await verifyPageOwnership(accessToken, result.userId, id, 'diet')
 
     const recordDateISO = buildRecordDateISO(body)
+    const recordTitle = buildRecordTitle(body, recordDateISO)
     const properties = formValuesToNotionProperties(body, recordTitle, recordDateISO)
     const page = await updatePageProperties(accessToken, id, properties, result.userId)
 
@@ -97,7 +106,6 @@ export async function PATCH(
 }
 
 // DELETE /api/diet/[id] — 刪除紀錄（移至 Notion 垃圾桶，非永久刪除）
-// 補齊：IDOR防護、刪除後清除快取（原版本這兩項都缺）
 export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }

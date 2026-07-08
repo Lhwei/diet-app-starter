@@ -24,21 +24,25 @@ async function getUserAndDietDbId() {
   return { userId: user.id, dietDbId: connection.diet_db_id as string }
 }
 
-// 「記錄時間」是Notion資料庫的title欄位，這裡統一產生一個可讀的標題字串
-// 若前端有帶 recordTitle 就直接使用，否則用目前時間當標題
-function buildRecordTitle(values: Record<string, any>): string {
-  if (values.recordTitle) return String(values.recordTitle)
-  const now = new Date()
-  return now.toLocaleString('zh-TW', { hour12: false })
-}
-
 // 「記錄日期」是真正的Date類型欄位，供 /api/diet?date=YYYY-MM-DD 篩選查詢使用。
-// 新增時：若前端沒有明確帶recordDate，直接用目前時間（跟title同一個時間點）。
+// 新增時：若前端沒有明確帶recordDate，直接用目前時間。
 // 編輯時：若前端有把既有的recordDate(ISO字串，來自notionPageToRecord)原封不動傳回來，就沿用原本日期，
 // 不會因為使用者「編輯」一筆舊紀錄而讓它的日期被誤改成今天。
+// 這個函式必須先算出來，因為下面 buildRecordTitle 需要依這個日期組標題，兩者才會同步。
 function buildRecordDateISO(values: Record<string, any>): string {
   if (values.recordDate) return String(values.recordDate)
   return new Date().toISOString()
+}
+
+// 「記錄時間」是Notion資料庫的title欄位，這裡統一產生一個可讀的標題字串。
+// 修正重點：原本只認 values.recordTitle，若前端沒帶就一律用「伺服器收到請求當下」的時間，
+// 這會導致使用者手動把 recordDate 改成過去日期時，「記錄日期」Date欄位正確存成過去日期，
+// 但作為標題的「記錄時間」title卻還是顯示現在時間，兩個本該同步的欄位對不起來。
+// 現在改成：優先用 recordTitle；沒有的話，用 recordDateISO 對應的時間點組標題，
+// 而不是另外重新 new Date()，確保title字串跟Date欄位永遠是同一個時間點。
+function buildRecordTitle(values: Record<string, any>, recordDateISO: string): string {
+  if (values.recordTitle) return String(values.recordTitle)
+  return new Date(recordDateISO).toLocaleString('zh-TW', { hour12: false })
 }
 
 // GET /api/diet?days=30       舊行為：查詢近N天的飲食紀錄，走快取（儀表板圖表使用）
@@ -158,8 +162,8 @@ export async function POST(request: Request) {
 
   try {
     const accessToken = await getValidNotionAccessToken(result.userId)
-    const recordTitle = buildRecordTitle(body)
     const recordDateISO = buildRecordDateISO(body)
+    const recordTitle = buildRecordTitle(body, recordDateISO)
     const properties = formValuesToNotionProperties(body, recordTitle, recordDateISO)
     const page = await createDatabasePage(accessToken, result.dietDbId, properties)
 
@@ -194,8 +198,8 @@ export async function PUT(request: Request) {
     // IDOR防護：確認這個pageId真的屬於該使用者記錄的飲食紀錄資料庫，不符合直接拒絕
     await verifyPageOwnership(accessToken, result.userId, pageId, 'diet')
 
-    const recordTitle = buildRecordTitle(values)
     const recordDateISO = buildRecordDateISO(values)
+    const recordTitle = buildRecordTitle(values, recordDateISO)
     const properties = formValuesToNotionProperties(values, recordTitle, recordDateISO)
     const page = await updatePageProperties(accessToken, pageId, properties, result.userId)
 
