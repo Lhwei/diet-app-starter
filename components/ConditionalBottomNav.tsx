@@ -9,7 +9,7 @@
 import { usePathname } from 'next/navigation'
 import MobileBottomNav from './MobileBottomNav'
 
-const HIDDEN_ON_PATHS = ['/login', '/privacy-policy', '/terms-of-service']
+const HIDDEN_ON_PATHS = ['/login', ]
 
 export default function ConditionalBottomNav() {
   const pathname = usePathname()

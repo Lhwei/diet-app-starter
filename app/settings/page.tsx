@@ -34,7 +34,7 @@ export default async function SettingsPage() {
   const isInitCompleted = connection?.init_step === 'completed'
 
   return (
-    <main className="max-w-2xl mx-auto px-4 py-6 sm:py-8 space-y-8 pb-16">
+    <main className="max-w-2xl mx-auto px-4 pt-6 sm:pt-8 space-y-8 pb-20">
       <h1 className="text-xl sm:text-2xl font-bold">設定</h1>
 
       {/* 狀態層：Notion 連結狀態，App能不能正常運作的前提，用色塊區分正常/異常一目瞭然 */}

@@ -1,6 +1,6 @@
 export default function TermsOfServicePage() {
   return (
-    <main className="max-w-2xl mx-auto px-6 py-12 space-y-6 text-sm leading-relaxed text-gray-700">
+    <main className="max-w-2xl mx-auto px-6 pt-12 pb-20 space-y-6 text-sm leading-relaxed text-gray-700">
       <h1 className="text-2xl font-bold text-gray-900">服務條款</h1>
       <p className="text-gray-400">最後更新日期：2026年7月5日</p>
 

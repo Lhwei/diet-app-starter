@@ -9,7 +9,7 @@ export default async function PhysioPage() {
 
   return (
     <>
-      <main className="max-w-3xl mx-auto px-4 py-8 space-y-6">
+      <main className="max-w-3xl mx-auto px-4 pt-8 pb-20 space-y-6">
         <h1 className="text-2xl font-bold">生理紀錄</h1>
         <PhysioRecordList />
       </main>
