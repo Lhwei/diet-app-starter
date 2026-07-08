@@ -7,7 +7,7 @@ import { NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { queryDatabase, NotionApiError } from '@/lib/notion/client'
 import { getValidNotionAccessToken } from '@/lib/notion/tokenManager'
-import { dietFields, dietRecordDateProp, DietFieldType } from '@/lib/dietFieldsConfig'
+import { dietFields, dietRecordDateProp, DietFieldType } from '@/lib/notion/dietFieldsConfig'
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
