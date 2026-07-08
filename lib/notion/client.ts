@@ -216,3 +216,16 @@ export function updatePageProperties(
 export function retrievePage(accessToken: string, pageId: string, userId?: string) {
   return notionFetch(accessToken, `/pages/${pageId}`, { userId })
 }
+
+export function appendBlockChildren(
+  accessToken: string,
+  blockId: string,
+  children: Record<string, any>[],
+  userId?: string
+) {
+  return notionFetch(accessToken, `/blocks/${blockId}/children`, {
+    method: 'PATCH',
+    userId,
+    body: JSON.stringify({ children }),
+  })
+}
