@@ -128,7 +128,6 @@ export default async function SettingsPage() {
           <div className="flex items-center justify-between px-4 py-3.5">
             <div>
               <p className="text-sm text-gray-700">登出帳號</p>
-              <p className="text-xs text-gray-400 mt-0.5">登出後需重新使用 Google 帳號登入</p>
             </div>
             <LogoutButton />
           </div>
