@@ -45,7 +45,7 @@ export default function DeleteAccountSection() {
 
       <p className="text-sm text-gray-600">
         刪除帳號後，我們會清除您在本App中儲存的所有資料，包括已加密的Notion授權資訊。
-        此操作無法復原。即使原帳號、原Notion帳號重新使用，都會建立新的頁面和資料庫。
+        此操作無法復原。若原帳號、原Notion帳號重新使用，可選擇連結未刪除的原有頁面和資料庫，若原有頁面和資料庫已刪除，則將建立新的頁面和資料庫。
       </p>
 
       <p className="text-sm text-gray-600 font-medium">
