@@ -55,13 +55,12 @@ export default function DeleteAccountSection() {
       </p>
 
       {!showConfirm ? (
-        <p>目前暫時不提供</p>
-        // <button
-        //   onClick={() => setShowConfirm(true)}
-        //   className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
-        // >
-        //   我要刪除帳號
-        // </button>
+        <button
+          onClick={() => setShowConfirm(true)}
+          className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+        >
+          我要刪除帳號
+        </button>
       ) : (
         <div className="space-y-3">
           <label className="block text-sm text-gray-700">
