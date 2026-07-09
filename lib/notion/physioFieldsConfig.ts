@@ -48,6 +48,12 @@ export const physioFields: PhysioFieldConfig[] = [
   { key: 'exerciseType', notionProp: '運動類型', label: '運動類型', type: 'multi_select', options: ['爬樓梯', '走路', '其他'], group: '生活習慣' },
   { key: 'exerciseDuration', notionProp: '運動時長(分)', label: '運動時長(分)', type: 'number', group: '生活習慣' },
   { key: 'menstrualStatus', notionProp: '經期/生理狀態', label: '經期/生理狀態', type: 'select', options: ['經期中', '黃體期', '濾泡期', '無'], group: '生活習慣' },
+
+  // 新增：上廁所快速打卡專用欄位。設計成每次點擊就送出一筆「單次事件」記錄
+  // （跟其他生理數值一樣是「一個時間點一筆」，不是一天累加一筆），
+  // 儀表板統計「今天上廁所幾次」時，用同一天內這個欄位有值的記錄筆數計算即可，
+  // 不需要額外的「次數」輸入欄位。
+  { key: 'toiletType', notionProp: '如廁類型', label: '如廁類型', type: 'select', options: ['尿尿', '大便'], group: '生活習慣' },
 ]
 
 export const physioFieldGroups = Array.from(new Set(physioFields.map((f) => f.group)))

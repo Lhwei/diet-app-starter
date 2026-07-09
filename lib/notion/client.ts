@@ -6,6 +6,9 @@
 //    （呼叫端需傳入 userId，才能查到對應使用者的refresh_token去刷新）
 // 2. 新增 verifyDatabaseOwnership：CRUD前先確認page_id/database_id真的屬於該使用者，
 //    防止IDOR（跨使用者存取他人Notion資料）
+// 3. 新增 retrieveDatabase + updateDatabaseProperties：供 patch-schema route 使用，
+//    修補既有使用者資料庫缺漏的property，全程走notionFetch封裝（401刷新token重試、
+//    429指數退避），不是額外開一條裸fetch繞過既有錯誤處理機制
 
 import { forceRefreshNotionToken } from './tokenManager'
 import { createServiceRoleClient } from '@/lib/supabase/server'
@@ -227,5 +230,28 @@ export function appendBlockChildren(
     method: 'PATCH',
     userId,
     body: JSON.stringify({ children }),
+  })
+}
+
+
+export function retrieveDatabase(accessToken: string, databaseId: string, userId?: string) {
+  return notionFetch(accessToken, `/databases/${databaseId}`, { userId })
+}
+
+// 修補既有資料庫的 property 定義（PATCH /v1/databases/{id}）
+// 用於 app/api/notion/patch-schema/route.ts：只新增schema裡缺的property，
+// 不會動到已存在的欄位或使用者已填的資料（Notion API的PATCH properties是merge語意，
+// 傳入的property名稱若已存在會被覆蓋定義，若不存在則新增；這裡呼叫端已先比對過
+// 只傳「目前資料庫沒有的」property，不會誤蓋到既有欄位設定）
+export function updateDatabaseProperties(
+  accessToken: string,
+  databaseId: string,
+  properties: Record<string, any>,
+  userId?: string
+) {
+  return notionFetch(accessToken, `/databases/${databaseId}`, {
+    method: 'PATCH',
+    userId,
+    body: JSON.stringify({ properties }),
   })
 }

@@ -1,6 +1,13 @@
 // Notion Database Property Schema 定義
 // 根據隊長提供的欄位設計文件轉換而成，用於呼叫 Notion API 建立資料庫時的 properties 參數
 // 個人資料已改為 Database（原規格是 Page，因欄位含 Select/Multi-select/Number，改用 Database 較合理）
+//
+// 修正記錄：糖/酒精/咖啡因(飲食)、如廁類型(生理) 這幾個欄位先前只加進了
+// dietFieldsConfig.ts / physioFieldsConfig.ts（驅動表單UI跟讀寫），
+// 但沒同步加進這裡的schema定義。這裡是「新使用者第一次連結Notion」時
+// 建立資料庫用的property定義，沒補齊的話，新使用者的Notion資料庫會缺這幾個
+// property，表單填了送出會失敗。這次補齊，並與physioFieldsConfig.ts /
+// dietFieldsConfig.ts 逐一核對過選項內容(select的options)完全一致。
 
 type NotionPropertySchema = Record<string, any>
 
@@ -112,6 +119,10 @@ export const physioRecordSchema: NotionPropertySchema = {
   '經期/生理狀態': {
     select: { options: [{ name: '經期中' }, { name: '黃體期' }, { name: '濾泡期' }, { name: '無' }] },
   },
+  // 補上：如廁快速打卡用，與physioFieldsConfig.ts的toiletType欄位對應
+  '如廁類型': {
+    select: { options: [{ name: '尿尿' }, { name: '大便' }] },
+  },
 }
 
 // ---------- 飲食紀錄 資料庫 schema ----------
@@ -130,6 +141,23 @@ export const dietRecordSchema: NotionPropertySchema = {
   '水果類(份)': { number: { format: 'number' } },
   '乳品類(份)': { number: { format: 'number' } },
   '油脂與堅果種子類(份)': { number: { format: 'number' } },
+
+  // 補上：糖，與dietFieldsConfig.ts的sugarDrink欄位對應
+  '含糖飲料/甜點(份)': { number: { format: 'number' } },
+
+  // 補上：酒精，與dietFieldsConfig.ts的alcoholType/alcohol/alcoholCalories欄位對應
+  '酒類': {
+    select: { options: [{ name: '啤酒' }, { name: '紅酒' }, { name: '白酒/清酒' }, { name: '烈酒' }, { name: '其他' }] },
+  },
+  '飲用量(ml)': { number: { format: 'number' } },
+  '酒精熱量(kcal)': { number: { format: 'number' } },
+
+  // 補上：咖啡因，與dietFieldsConfig.ts的caffeineSource/caffeineServings欄位對應
+  '咖啡因來源': {
+    select: { options: [{ name: '無' }, { name: '咖啡' }, { name: '茶' }, { name: '其他' }] },
+  },
+  '咖啡因份數(杯)': { number: { format: 'number' } },
+
   '蛋白質(g)': { number: { format: 'number' } },
   '脂質(g)': { number: { format: 'number' } },
   '碳水化合物(g)': { number: { format: 'number' } },

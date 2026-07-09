@@ -4,13 +4,13 @@
 export type DietFieldType = 'title' | 'select' | 'multi_select' | 'number' | 'rich_text' | 'date'
 
 export interface DietFieldConfig {
-  key: string // 前端表單用的 key（英文，方便 React state 操作）
-  notionProp: string // 對應 Notion database 的 property 名稱（中文，需與 schemas.ts 完全一致）
+  key: string
+  notionProp: string
   label: string
   type: DietFieldType
-  options?: string[] // select / multi_select 專用
+  options?: string[]
   required?: boolean
-  readOnly?: boolean // 由前端自動計算寫入，使用者不可手動編輯
+  readOnly?: boolean
 }
 
 export const dietFields: DietFieldConfig[] = [
@@ -22,6 +22,21 @@ export const dietFields: DietFieldConfig[] = [
   { key: 'fruit', notionProp: '水果類(份)', label: '水果類(份)', type: 'number' },
   { key: 'dairy', notionProp: '乳品類(份)', label: '乳品類(份)', type: 'number' },
   { key: 'oilNuts', notionProp: '油脂與堅果種子類(份)', label: '油脂與堅果種子類(份)', type: 'number' },
+
+  // 糖：會計入碳水化合物與總熱量計算（比照水果類單位：1份=15g碳水=60大卡）
+  { key: 'sugarDrink', notionProp: '含糖飲料/甜點(份)', label: '含糖飲料/甜點(份)', type: 'number' },
+
+  // 酒精：使用者填「喝下去的酒飲總量ml」+「酒類」，程式依酒類自動帶入濃度換算熱量，
+  // 不需要使用者自己計算純酒精量。酒精熱量獨立算出存進 alcoholCalories，不計入三大營養素比例，
+  // 但計入總熱量(calories)。
+  { key: 'alcoholType', notionProp: '酒類', label: '酒類', type: 'select', options: ['啤酒', '紅酒', '白酒/清酒', '烈酒', '其他'] },
+  { key: 'alcohol', notionProp: '飲用量(ml)', label: '飲用量(ml)', type: 'number' },
+  { key: 'alcoholCalories', notionProp: '酒精熱量(kcal)', label: '酒精熱量(kcal)', type: 'number', readOnly: true },
+
+  // 咖啡因：純粹紀錄用途，無熱量，不計入任何營養素/熱量計算
+  { key: 'caffeineSource', notionProp: '咖啡因來源', label: '咖啡因來源', type: 'select', options: ['無', '咖啡', '茶', '其他'] },
+  { key: 'caffeineServings', notionProp: '咖啡因份數(杯)', label: '咖啡因份數(杯)', type: 'number' },
+
   { key: 'protein', notionProp: '蛋白質(g)', label: '蛋白質(g)', type: 'number', readOnly: true },
   { key: 'fat', notionProp: '脂質(g)', label: '脂質(g)', type: 'number', readOnly: true },
   { key: 'carb', notionProp: '碳水化合物(g)', label: '碳水化合物(g)', type: 'number', readOnly: true },
@@ -39,7 +54,4 @@ export const dietFields: DietFieldConfig[] = [
   { key: 'note', notionProp: '備註', label: '備註', type: 'rich_text' },
 ]
 
-// 記錄日期：獨立於 dietFields 陣列之外處理，因為它不需要出現在表單UI上讓使用者填寫，
-// 而是在 dietMapper.ts 建立/更新紀錄時，自動依「記錄時間」title字串同步寫入這個真正的Date欄位，
-// 專門給 /api/diet?date=YYYY-MM-DD 這種單日篩選查詢使用（title類型的Notion property不支援date filter）
 export const dietRecordDateProp = '記錄日期'

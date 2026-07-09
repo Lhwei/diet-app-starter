@@ -48,12 +48,16 @@ export async function GET(request: Request) {
       allRecords = allRecords.concat(pageRecords)
 
       const oldestInPage = pageRecords[pageRecords.length - 1]
-      hasMore = data.has_more && oldestInPage && new Date(oldestInPage.createdTime) > sinceDate
+      // 修正：優先用recordDate(使用者填的記錄日期)判斷是否還在範圍內，
+      // 缺失才退回createdTime，避免補登過去日期的紀錄被誤判成「還在近N天內」
+      // 導致分頁抓取提早停止，或反過來把它排除在畫面之外
+      const oldestDateValue = oldestInPage ? (oldestInPage.recordDate || oldestInPage.createdTime) : null
+      hasMore = data.has_more && oldestDateValue && new Date(oldestDateValue) > sinceDate
       cursor = data.next_cursor
       pageCount++
     }
 
-    const filtered = allRecords.filter((r) => new Date(r.createdTime) > sinceDate)
+    const filtered = allRecords.filter((r) => new Date(r.recordDate || r.createdTime) > sinceDate)
 
     // 一併查詢個人資料的身高，供BMI計算使用
     let heightCm: number | null = null

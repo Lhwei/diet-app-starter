@@ -1,12 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import CalorieTrendChart from './charts/CalorieTrendChart'
 import MacroDonutChart from './charts/MacroDonutChart'
 import SixCategoryRadarChart from './charts/SixCategoryRadarChart'
 import CalorieGauge from './charts/CalorieGauge'
 import MealStackedBarChart from './charts/MealStackedBarChart'
-import { bucketByDay, summarizeToday, DietRecordRaw } from '@/lib/dashboard/aggregateDiet'
+import ExtraIntakeTrendChart from './charts/ExtraIntakeTrendChart'
+import { bucketByDay, summarizeToday, hasAnyExtraIntake, DietRecordRaw } from '@/lib/dashboard/aggregateDiet'
 import LoadingSpinner from './LoadingSpinner'
 
 interface Props {
@@ -49,6 +50,12 @@ export default function DietDashboard({ days }: Props) {
     return () => { cancelled = true }
   }, [days])
 
+  const todaySummary = useMemo(() => (records ? summarizeToday(records) : null), [records])
+  const dayBuckets = useMemo(() => (records ? bucketByDay(records, days) : []), [records, days])
+
+  // 選定時間範圍內完全沒有糖/酒精/咖啡因攝取紀錄時，自動收合成精簡提示，不佔版面
+  const hasExtraIntake = useMemo(() => hasAnyExtraIntake(dayBuckets), [dayBuckets])
+
   if (error === 'notion_not_ready') {
     return (
       <div className="bg-yellow-50 text-yellow-700 rounded-xl p-4 text-sm">
@@ -59,7 +66,7 @@ export default function DietDashboard({ days }: Props) {
 
   if (error) return <p className="text-red-600">讀取失敗：{error}</p>
 
-  if (records === null) return <LoadingSpinner />
+  if (records === null || todaySummary === null) return <LoadingSpinner />
 
   if (records.length === 0) {
     return <p className="text-gray-400">還沒有飲食紀錄，先到「飲食紀錄」頁面新增幾筆吧！</p>
@@ -68,21 +75,30 @@ export default function DietDashboard({ days }: Props) {
   return (
     <div className="space-y-5">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <CalorieGauge consumed={summarizeToday(records).totalCalories} target={calorieTarget} />
+        <CalorieGauge consumed={todaySummary.totalCalories} target={calorieTarget} />
         <MacroDonutChart
-          protein={summarizeToday(records).macros.protein}
-          fat={summarizeToday(records).macros.fat}
-          carb={summarizeToday(records).macros.carb}
+          protein={todaySummary.macros.protein}
+          fat={todaySummary.macros.fat}
+          carb={todaySummary.macros.carb}
+          alcoholCalories={todaySummary.macros.alcoholCalories}
           targetRatioText={targetRatioText}
         />
       </div>
 
-      <CalorieTrendChart data={bucketByDay(records, days)} targetCalories={calorieTarget} />
+      <CalorieTrendChart data={dayBuckets} targetCalories={calorieTarget} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <SixCategoryRadarChart data={summarizeToday(records).sixCategory} />
-        <MealStackedBarChart data={bucketByDay(records, days)} />
+        <SixCategoryRadarChart data={todaySummary.sixCategory} />
+        <MealStackedBarChart data={dayBuckets} />
       </div>
+
+      {hasExtraIntake ? (
+        <ExtraIntakeTrendChart data={dayBuckets} />
+      ) : (
+        <div className="bg-gray-50 rounded-xl px-4 py-3 text-xs text-gray-400">
+          這段時間沒有糖／酒精／咖啡因攝取紀錄，圖表已自動收合
+        </div>
+      )}
     </div>
   )
 }

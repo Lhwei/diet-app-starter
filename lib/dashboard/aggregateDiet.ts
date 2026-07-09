@@ -9,6 +9,9 @@ export interface DietRecordRaw {
   protein?: number
   fat?: number
   carb?: number
+  alcoholCalories?: number // 酒精熱量，已包含在 calories 總熱量內，獨立拿出來畫第四塊扇區/趨勢線
+  sugarDrink?: number // 糖(份)，額外攝取，供長期趨勢追蹤
+  caffeineServings?: number // 咖啡因(杯)，額外攝取，供長期趨勢追蹤（無熱量，純習慣追蹤用）
   wholeGrain?: number
   proteinFood?: number
   vegetable?: number
@@ -22,13 +25,13 @@ export interface DayBucket {
   label: string // MM/dd 顯示用
   totalCalories: number
   mealBreakdown: Record<string, number>
+  sugarServings: number // 當日糖(份)加總
+  alcoholCalories: number // 當日酒精熱量(kcal)加總
+  caffeineServings: number // 當日咖啡因(杯)加總
 }
 
 const MEAL_TYPES = ['早餐', '午餐', '晚餐', '點心', '宵夜']
 
-// 六大類建議份數的預設基準（依 1600kcal 減脂控卡飲食常見建議估算）
-// 註：個人資料目前沒有自訂建議份數欄位（隊長已確認刪除 JSON 欄位），此為暫用預設值，
-// 之後若要做成可自訂，需在個人資料資料庫新增對應 Number 欄位
 export const defaultSuggestedServings: Record<string, number> = {
   wholeGrain: 3,
   proteinFood: 4,
@@ -49,7 +52,7 @@ export const foodCategoryLabels: Record<string, string> = {
 
 function toDateKey(isoString: string): string {
   const d = new Date(isoString)
-  return d.toISOString().slice(0, 10) // yyyy-MM-dd（用 UTC 簡化處理，避免時區判斷複雜度）
+  return d.toISOString().slice(0, 10)
 }
 
 function toLabel(dateKey: string): string {
@@ -57,7 +60,6 @@ function toLabel(dateKey: string): string {
   return `${m}/${d}`
 }
 
-// 依日期分桶，計算每日總熱量與各餐別熱量疊層（供折線圖 + 堆疊長條圖使用）
 export function bucketByDay(records: DietRecordRaw[], days: number): DayBucket[] {
   const buckets = new Map<string, DayBucket>()
 
@@ -71,27 +73,38 @@ export function bucketByDay(records: DietRecordRaw[], days: number): DayBucket[]
       label: toLabel(key),
       totalCalories: 0,
       mealBreakdown: Object.fromEntries(MEAL_TYPES.map((m) => [m, 0])),
+      sugarServings: 0,
+      alcoholCalories: 0,
+      caffeineServings: 0,
     })
   }
 
   for (const r of records) {
-    const key = toDateKey(r.recordDate ?? r.createdTime)   // 優先用 recordDate，沒有才退回 createdTime
+    const key = toDateKey(r.recordDate ?? r.createdTime)
     const bucket = buckets.get(key)
-    if (!bucket) continue // 超出範圍的紀錄不列入
+    if (!bucket) continue
     const cal = r.calories ?? 0
     bucket.totalCalories += cal
     if (r.mealType && bucket.mealBreakdown[r.mealType] !== undefined) {
       bucket.mealBreakdown[r.mealType] += cal
     }
+    bucket.sugarServings += r.sugarDrink ?? 0
+    bucket.alcoholCalories += r.alcoholCalories ?? 0
+    bucket.caffeineServings += r.caffeineServings ?? 0
   }
 
   return Array.from(buckets.values())
 }
 
+// 判斷選定範圍內糖/酒精/咖啡因是否全部為0，供儀表板決定要不要收合這個區塊
+export function hasAnyExtraIntake(buckets: DayBucket[]): boolean {
+  return buckets.some((b) => b.sugarServings > 0 || b.alcoholCalories > 0 || b.caffeineServings > 0)
+}
+
 export interface TodaySummary {
   totalCalories: number
-  macros: { protein: number; fat: number; carb: number }
-  macroRatio: { protein: number; fat: number; carb: number } // 熱量佔比 %
+  macros: { protein: number; fat: number; carb: number; alcoholCalories: number }
+  macroRatio: { protein: number; fat: number; carb: number; alcohol: number }
   sixCategory: Array<{ key: string; label: string; actual: number; suggested: number }>
 }
 
@@ -102,6 +115,7 @@ export function summarizeToday(records: DietRecordRaw[]): TodaySummary {
   let protein = 0
   let fat = 0
   let carb = 0
+  let alcoholCalories = 0
   const categoryTotals: Record<string, number> = {
     wholeGrain: 0, proteinFood: 0, vegetable: 0, fruit: 0, dairy: 0, oilNuts: 0,
   }
@@ -111,6 +125,7 @@ export function summarizeToday(records: DietRecordRaw[]): TodaySummary {
     protein += r.protein ?? 0
     fat += r.fat ?? 0
     carb += r.carb ?? 0
+    alcoholCalories += r.alcoholCalories ?? 0
     for (const key of Object.keys(categoryTotals)) {
       categoryTotals[key] += (r as any)[key] ?? 0
     }
@@ -119,15 +134,16 @@ export function summarizeToday(records: DietRecordRaw[]): TodaySummary {
   const proteinKcal = protein * 4
   const fatKcal = fat * 9
   const carbKcal = carb * 4
-  const kcalSum = proteinKcal + fatKcal + carbKcal
+  const kcalSum = proteinKcal + fatKcal + carbKcal + alcoholCalories
 
   const macroRatio = kcalSum > 0
     ? {
         protein: Math.round((proteinKcal / kcalSum) * 100),
         fat: Math.round((fatKcal / kcalSum) * 100),
         carb: Math.round((carbKcal / kcalSum) * 100),
+        alcohol: Math.round((alcoholCalories / kcalSum) * 100),
       }
-    : { protein: 0, fat: 0, carb: 0 }
+    : { protein: 0, fat: 0, carb: 0, alcohol: 0 }
 
   const sixCategory = Object.entries(categoryTotals).map(([key, actual]) => ({
     key,
@@ -138,7 +154,12 @@ export function summarizeToday(records: DietRecordRaw[]): TodaySummary {
 
   return {
     totalCalories: Math.round(totalCalories),
-    macros: { protein: Math.round(protein * 10) / 10, fat: Math.round(fat * 10) / 10, carb: Math.round(carb * 10) / 10 },
+    macros: {
+      protein: Math.round(protein * 10) / 10,
+      fat: Math.round(fat * 10) / 10,
+      carb: Math.round(carb * 10) / 10,
+      alcoholCalories: Math.round(alcoholCalories),
+    },
     macroRatio,
     sixCategory,
   }

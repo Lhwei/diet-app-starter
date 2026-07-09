@@ -4,11 +4,12 @@
 // 分頁模式讀取(/api/physio?limit=50&cursor=xxx)，超過50筆時「載入更多」串接下一批(cursor-based分頁)。
 // 不做日期篩選(隊長確認不需要)，純粹按「記錄日期」新到舊排序往下載入。
 //
-// 本次修正：
-// 1. 排序已改由後端保證新到舊（記錄日期可能混雜新舊格式，後端統一重新排序後才回傳）
-// 2. 分頁查詢改成不經過伺服器端快取，F5重新整理一律拿到Notion最新資料
-// 3. 卡片改用跟飲食紀錄一致的 SwipeableRecordCard（點按進入編輯、左滑刪除）
-// 4. 卡片資訊層級重新設計：時段(標籤)+日期時間 → 體重(主要大數字) → 其他數值(次要chip)
+// 本次修正：統一「主要數值」插槽的樣式邏輯。
+// 體重/飲水量/如廁類型三者互斥(一筆紀錄只會有其中一種)，性質上都是「這筆紀錄的
+// 核心結果」，統一用同一種「數字+單位」視覺樣式呈現在第一行右側，不再讓如廁類型
+// 用左側標籤徽章、飲水量卻用右側數字這種不一致的呈現方式。
+// 如廁類型固定顯示「1」，因為快捷記錄的設計是「每次點擊=一筆單次事件」，
+// 不是累加次數，所以這裡的1單純代表「這一筆」，不是從資料裡加總計算。
 
 import { useState, useEffect } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
@@ -21,6 +22,39 @@ function formatRecordDateDisplay(recordDate: string): string {
   const date = new Date(recordDate)
   if (isNaN(date.getTime())) return recordDate
   return date.toLocaleString('zh-TW', { hour12: false })
+}
+
+// 第一行右側的「主要數值」插槽：體重/飲水量/如廁類型互斥，統一用同一種樣式(大數字+單位)呈現
+function PrimaryValue({ record }: { record: any }) {
+  if (record.weight != null) {
+    return (
+      <span className="text-base font-bold text-gray-900">
+        {record.weight}<span className="text-xs font-normal text-gray-400 ml-0.5">kg</span>
+      </span>
+    )
+  }
+  if (record.waterIntake != null) {
+    return (
+      <span className="text-base font-bold text-sky-600">
+        {record.waterIntake}<span className="text-xs font-normal text-sky-400 ml-0.5">ml</span>
+      </span>
+    )
+  }
+  if (record.toiletType === '尿尿') {
+    return (
+      <span className="text-base font-bold text-blue-600">
+        1<span className="text-xs font-normal text-blue-400 ml-0.5">尿尿</span>
+      </span>
+    )
+  }
+  if (record.toiletType === '大便') {
+    return (
+      <span className="text-base font-bold text-amber-700">
+        1<span className="text-xs font-normal text-amber-500 ml-0.5">大便</span>
+      </span>
+    )
+  }
+  return null
 }
 
 export default function PhysioRecordList() {
@@ -118,7 +152,7 @@ export default function PhysioRecordList() {
             isDeleting={deletingId === record.id}
           >
             <div className="p-4 space-y-2.5">
-              {/* 第一層：時段(主標籤) + 日期時間(次要資訊)，一眼看出「這是什麼時段量的、何時量的」 */}
+              {/* 第一層：左側標籤(時段)+日期時間，右側主要數值(體重/飲水量/如廁類型三者互斥) */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   {record.timeSlot && (
@@ -128,11 +162,7 @@ export default function PhysioRecordList() {
                   )}
                   <span className="text-xs text-gray-400">{formatRecordDateDisplay(record.recordDate)}</span>
                 </div>
-                {record.weight != null && (
-                  <span className="text-base font-bold text-gray-900">
-                    {record.weight}<span className="text-xs font-normal text-gray-400 ml-0.5">kg</span>
-                  </span>
-                )}
+                <PrimaryValue record={record} />
               </div>
 
               {/* 第二層：其他常見數值，次要輔助資訊，用小型chip呈現 */}

@@ -18,6 +18,32 @@ export const foodGroupNutrition: FoodGroupNutrition[] = [
   { key: 'oilNuts', label: '油脂與堅果種子類', calories: 45, protein: 0, fat: 5, carb: 0 },
 ]
 
+// 糖（含糖飲料/甜點）換算基準：比照水果類的碳水單位定義，1份=15g碳水=60大卡，
+// 不含蛋白質/脂質（單純糖類的熱量來源只有碳水）
+export const SUGAR_SERVING = { calories: 60, carb: 15 }
+
+// 酒類ABV%對照表（估算值，供熱量換算使用，非精確醫學數據）
+// 使用者填「飲用量(ml)」= 喝下去的酒飲總量（例如一杯啤酒350ml），而非純酒精量，
+// 程式依酒類自動帶入濃度換算，使用者不需要自己計算酒精濃度
+export const ALCOHOL_ABV: Record<string, number> = {
+  '啤酒': 5,
+  '紅酒': 12,
+  '白酒/清酒': 15,
+  '烈酒': 40,
+  '其他': 10,
+}
+export const alcoholTypeOptions = Object.keys(ALCOHOL_ABV)
+
+// 酒精熱量公式：飲用量(ml) × 酒精濃度% × 0.8(酒精密度g/ml) × 7大卡/g酒精
+// 酒精是純熱量來源，不計入蛋白質/脂質/碳水任何一項，因此獨立回傳，不併入三大營養素比例計算
+export function calculateAlcoholCalories(ml: number, type: string | undefined): number {
+  if (!ml || ml <= 0) return 0
+  const abv = ALCOHOL_ABV[type ?? '其他'] ?? ALCOHOL_ABV['其他']
+  const grams = ml * (abv / 100) * 0.8
+  return Math.round(grams * 7)
+}
+
+// 原本的六大類份數計算，維持不變（供表單即時顯示六大類小計等場景沿用）
 export function calculateNutritionFromServings(servings: Record<string, number>) {
   let calories = 0
   let protein = 0
@@ -47,6 +73,44 @@ export function calculateNutritionFromServings(servings: Record<string, number>)
     : ''
 
   return { calories, protein, fat, carb, ratioText }
+}
+
+// 完整版計算：六大類 + 糖 + 酒精，統一在這裡計算後寫入表單/Notion，
+// 這是 DietRecordForm.tsx 送出表單時應該呼叫的函式（取代單純呼叫 calculateNutritionFromServings）。
+//
+// 熱量(calories)：六大類 + 糖 + 酒精 全部計入，用於「本日熱量缺口」等總熱量相關計算
+// 三大營養素比例(ratioText)：只算蛋白質/脂質/碳水（酒精不是巨量營養素，不放進這個比例），
+//   碳水化合物本身有把糖的碳水量算進去（糖本來就是碳水的一種來源）
+// alcoholCalories：獨立回傳，供儀表板畫第四塊「酒精」扇區使用，需要另外存進Notion欄位
+export function calculateFullDietNutrition(values: Record<string, any>) {
+  const servings: Record<string, number> = {}
+  for (const group of foodGroupNutrition) {
+    servings[group.key] = Number(values[group.key]) || 0
+  }
+  const base = calculateNutritionFromServings(servings)
+
+  const sugarServings = Number(values.sugarDrink) || 0
+  const sugarCalories = sugarServings * SUGAR_SERVING.calories
+  const sugarCarb = sugarServings * SUGAR_SERVING.carb
+
+  const alcoholMl = Number(values.alcohol) || 0
+  const alcoholCalories = calculateAlcoholCalories(alcoholMl, values.alcoholType)
+
+  const protein = base.protein
+  const fat = base.fat
+  const carb = Math.round((base.carb + sugarCarb) * 10) / 10
+  const calories = Math.round(base.calories + sugarCalories + alcoholCalories)
+
+  const proteinKcal = protein * 4
+  const fatKcal = fat * 9
+  const carbKcal = carb * 4
+  const macroKcalSum = proteinKcal + fatKcal + carbKcal
+
+  const ratioText = macroKcalSum > 0
+    ? `${Math.round((proteinKcal / macroKcalSum) * 100)}% / ${Math.round((fatKcal / macroKcalSum) * 100)}% / ${Math.round((carbKcal / macroKcalSum) * 100)}%`
+    : ''
+
+  return { calories, protein, fat, carb, ratioText, alcoholCalories }
 }
 
 // 依目前時間自動判斷餐別，使用者仍可在表單上手動覆蓋

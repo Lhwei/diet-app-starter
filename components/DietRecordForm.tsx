@@ -2,21 +2,24 @@
 
 // 飲食紀錄新增/編輯表單
 //
-// 本次重新設計重點：
-// 1. 餐別依目前時間自動建議（suggestMealTypeByTime），使用者仍可手動點選其他餐別覆蓋
-// 2. 六大類食物份數改用 +/- 按鈕（一次0.5份），同時保留輸入框可直接手動輸入任意數字
-// 3. 原本的下拉式 <select>（餐別/飽足感/油脂感知/精神睏意/量測方式/場景來源）全部改成
-//    「點擊式選項卡」（外觀類似 multi_select 的 chip group，但仍是單選 select 語意）
-// 4. 資訊層級重新分區：記錄日期時間 → 基本資訊 → 六大類食物 → 營養小計(自動計算,只讀)
-//    → 補充生理數值 → 身心感知 → 情境與備註，每個分區用小標題 + 說明文字區隔
-// 5. 新增「記錄日期時間」欄位（比照PhysioRecordForm.tsx的做法），預設為目前時間，
-//    可手動改成過去日期時間，方便補登之前吃的一餐。改用datetime-local + ISO字串儲存，
-//    理由跟生理紀錄相同：中文格式（toLocaleString('zh-TW')）無法被new Date()正確解析，
-//    也無法用文字排序反映正確時間順序，會導致依日期篩選/排序全部失準。
+// 本次異動重點：
+// 1. 新增「記錄日期時間」欄位（可補登過去日期時間）
+// 2. 新增「額外攝取」區塊：糖(份)、酒精(酒類+ml)、咖啡因(來源+杯數)，放在六大類食物下方
+//    - 糖：計入碳水化合物與總熱量（比照水果類單位：1份=15g碳水=60大卡）
+//    - 酒精：使用者填「酒類」+「飲用量ml」（喝下去的酒飲總量，不是純酒精量），
+//      程式依酒類自動帶入濃度換算熱量。酒精熱量計入總熱量，但不計入三大營養素比例
+//      （因為酒精不是蛋白質/脂質/碳水任何一種巨量營養素）
+//    - 咖啡因：純紀錄用途，無熱量，不影響任何計算
+// 3. 改用 calculateFullDietNutrition()（取代原本的 calculateNutritionFromServings()）
+//    統一計算六大類+糖+酒精的熱量與三大營養素比例，一次算好，避免表單/儀表板各算一套
 
 import { useEffect, useState } from 'react'
 import { dietFields } from '@/lib/notion/dietFieldsConfig'
-import { calculateNutritionFromServings, foodGroupNutrition, suggestMealTypeByTime } from '@/lib/nutrition/foodGroupNutrition'
+import {
+  calculateFullDietNutrition,
+  foodGroupNutrition,
+  suggestMealTypeByTime,
+} from '@/lib/nutrition/foodGroupNutrition'
 import PortionGuideHint from '@/components/PortionGuideHint'
 
 interface DietRecordFormProps {
@@ -28,8 +31,6 @@ interface DietRecordFormProps {
 
 const fieldByKey = Object.fromEntries(dietFields.map((f) => [f.key, f]))
 
-// datetime-local input 需要 "YYYY-MM-DDTHH:mm" 格式，這裡做雙向轉換
-// 允許使用者手動改成過去的日期時間（例如補登之前吃的一餐），不需要另開新欄位
 function toDateTimeInputValue(date: Date): string {
   const pad = (n: number) => String(n).padStart(2, '0')
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
@@ -198,10 +199,8 @@ export default function DietRecordForm({ initialValues, onSuccess, onCancel }: D
     return () => clearInterval(timer)
   }, [isEditing, mealTypeTouched])
 
-  const servingsValues = Object.fromEntries(
-    foodGroupNutrition.map((g) => [g.key, Number(values[g.key]) || 0])
-  )
-  const computed = calculateNutritionFromServings(servingsValues)
+  // 統一計算：六大類 + 糖 + 酒精，一次算出總熱量、三大營養素比例、酒精熱量
+  const computed = calculateFullDietNutrition(values)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -209,10 +208,6 @@ export default function DietRecordForm({ initialValues, onSuccess, onCancel }: D
     setError(null)
 
     try {
-      // recordDate 改用 ISO 格式（YYYY-MM-DDTHH:mm:ss）傳給後端，理由跟生理紀錄相同：
-      // 中文格式無法被 new Date() 正確解析、也無法用文字排序反映正確時間順序。
-      // 後端 dietMapper.ts 需要改成優先採用這個 recordDate 來組「記錄時間」title字串與
-      // 「記錄日期」Date欄位，而不是一律用伺服器收到請求當下的 now()。
       const payload = {
         ...values,
         recordDate: parseRecordDate(recordDateTime).toISOString(),
@@ -221,6 +216,7 @@ export default function DietRecordForm({ initialValues, onSuccess, onCancel }: D
         carb: computed.carb,
         calories: computed.calories,
         ratioText: computed.ratioText,
+        alcoholCalories: computed.alcoholCalories,
       }
 
       const method = isEditing ? 'PUT' : 'POST'
@@ -249,7 +245,6 @@ export default function DietRecordForm({ initialValues, onSuccess, onCancel }: D
     <form onSubmit={handleSubmit} className="space-y-7">
       {error && <div className="bg-red-50 text-red-600 text-sm rounded-lg px-4 py-2">{error}</div>}
 
-      {/* 記錄日期時間：預設為目前時間，可手動改成過去日期時間，方便補登之前吃的一餐 */}
       <section className="space-y-2">
         <label className="block text-sm font-medium text-gray-700">記錄日期時間</label>
         <input
@@ -309,15 +304,77 @@ export default function DietRecordForm({ initialValues, onSuccess, onCancel }: D
         </div>
       </section>
 
+      {/* 額外攝取：糖/酒精會計入熱量與碳水/酒精熱量計算，咖啡因純紀錄不影響任何計算 */}
+      <section className="space-y-3">
+        <div>
+          <h3 className="text-sm font-semibold text-gray-900">額外攝取（選填）</h3>
+          <p className="text-xs text-gray-400 mt-0.5">糖與酒精會計入總熱量，咖啡因僅作紀錄不計熱量</p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <ServingStepper
+            label={fieldByKey.sugarDrink.label}
+            value={values.sugarDrink ?? ''}
+            onChange={(v) => updateValue('sugarDrink', v)}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <SingleChipSelect
+            label={fieldByKey.alcoholType.label}
+            options={fieldByKey.alcoholType.options!}
+            value={values.alcoholType}
+            onChange={(v) => updateValue('alcoholType', v)}
+          />
+          <div>
+            <label className="block text-xs text-gray-500 mb-1.5">{fieldByKey.alcohol.label}（喝下去的總量，非純酒精量）</label>
+            <input
+              type="number"
+              min="0"
+              value={values.alcohol ?? ''}
+              onChange={(e) => updateValue('alcohol', e.target.value === '' ? '' : Number(e.target.value))}
+              className="w-full text-sm rounded-lg border border-gray-300 px-3 py-2"
+              placeholder="例如：一杯啤酒約350ml"
+            />
+          </div>
+        </div>
+        {computed.alcoholCalories > 0 && (
+          <p className="text-xs text-amber-600">依所選酒類自動換算，本次酒精熱量約 {computed.alcoholCalories} kcal</p>
+        )}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <SingleChipSelect
+            label={fieldByKey.caffeineSource.label}
+            options={fieldByKey.caffeineSource.options!}
+            value={values.caffeineSource}
+            onChange={(v) => updateValue('caffeineSource', v)}
+          />
+          <div>
+            <label className="block text-xs text-gray-500 mb-1.5">{fieldByKey.caffeineServings.label}</label>
+            <input
+              type="number"
+              step="0.5"
+              min="0"
+              value={values.caffeineServings ?? ''}
+              onChange={(e) => updateValue('caffeineServings', e.target.value === '' ? '' : Number(e.target.value))}
+              className="w-full text-sm rounded-lg border border-gray-300 px-3 py-2"
+            />
+          </div>
+        </div>
+      </section>
+
       <section className="rounded-xl bg-gray-50 px-4 py-3.5">
         <div className="flex items-baseline justify-between mb-2">
-          <span className="text-xs text-gray-500">自動計算（依六大類份數換算，不可手動編輯）</span>
+          <span className="text-xs text-gray-500">自動計算（依六大類+糖+酒精換算，不可手動編輯）</span>
           <span className="text-lg font-bold text-gray-900">{computed.calories}<span className="text-xs font-normal text-gray-400 ml-1">kcal</span></span>
         </div>
         <div className="flex gap-2 flex-wrap">
           <span className="text-xs rounded-md px-2 py-1 font-medium bg-white text-gray-600 border border-gray-200">蛋白質 {computed.protein}g</span>
           <span className="text-xs rounded-md px-2 py-1 font-medium bg-white text-gray-600 border border-gray-200">脂質 {computed.fat}g</span>
           <span className="text-xs rounded-md px-2 py-1 font-medium bg-white text-gray-600 border border-gray-200">碳水 {computed.carb}g</span>
+          {computed.alcoholCalories > 0 && (
+            <span className="text-xs rounded-md px-2 py-1 font-medium bg-white text-amber-600 border border-amber-200">酒精 {computed.alcoholCalories}kcal</span>
+          )}
           {computed.ratioText && (
             <span className="text-xs rounded-md px-2 py-1 font-medium bg-white text-gray-500 border border-gray-200">{computed.ratioText}</span>
           )}
