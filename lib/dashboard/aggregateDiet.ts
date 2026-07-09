@@ -3,6 +3,7 @@
 export interface DietRecordRaw {
   id: string
   createdTime: string // Notion page.created_time，可靠的 ISO 時間戳（記錄時間 title 只是顯示用文字，不適合拿來做日期排序）
+  recordDate?: string | null // 使用者填寫的「記錄日期」真正Date欄位，補登過去日期時這個才是正確依據
   mealType?: string
   calories?: number
   protein?: number
@@ -74,7 +75,7 @@ export function bucketByDay(records: DietRecordRaw[], days: number): DayBucket[]
   }
 
   for (const r of records) {
-    const key = toDateKey(r.createdTime)
+    const key = toDateKey(r.recordDate ?? r.createdTime)   // 優先用 recordDate，沒有才退回 createdTime
     const bucket = buckets.get(key)
     if (!bucket) continue // 超出範圍的紀錄不列入
     const cal = r.calories ?? 0
@@ -96,8 +97,7 @@ export interface TodaySummary {
 
 export function summarizeToday(records: DietRecordRaw[]): TodaySummary {
   const todayKey = new Date().toISOString().slice(0, 10)
-  const todayRecords = records.filter((r) => toDateKey(r.createdTime) === todayKey)
-
+  const todayRecords = records.filter((r) => toDateKey(r.recordDate ?? r.createdTime) === todayKey)
   let totalCalories = 0
   let protein = 0
   let fat = 0
