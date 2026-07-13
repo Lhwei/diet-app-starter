@@ -33,7 +33,7 @@ export default function WaterCaffeineChart({ days, targetMl = 2500 }: Props) {
     records: physioRecords,
     isLoading: isPhysioLoading,
     error: physioError,
-  } = usePhysioSummary<PhysioRecordRaw>(days)
+  } = usePhysioSummary(days)
 
   const {
     records: dietRecords,

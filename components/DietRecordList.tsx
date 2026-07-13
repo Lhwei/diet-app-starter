@@ -72,7 +72,7 @@ export default function DietRecordList() {
   const {
     records: recentPhysioRecords,
     isLoading: isWeightLoading,
-  } = usePhysioSummary<PhysioRecordRaw>(90)
+  } = usePhysioSummary(90)
 
   const latestWeightKg = (() => {
     if (!recentPhysioRecords) return null
