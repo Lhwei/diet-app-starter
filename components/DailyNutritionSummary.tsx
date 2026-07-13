@@ -136,7 +136,7 @@ function WaterMetric({
         <span className="text-lg font-bold">
           {isLoading || waterIntakeMl === null ? '—' : Math.round(waterIntakeMl)}
         </span>
-        <span className="text-xs text-gray-400">/ {targetText} mL</span>
+        <span className="text-xs text-gray-400">/ {targetText}</span>
       </div>
       <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
         <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${percent}%` }} />
