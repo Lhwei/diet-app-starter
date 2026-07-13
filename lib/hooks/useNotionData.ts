@@ -24,14 +24,24 @@
 //    函式」區塊），通知 SWR 哪些資料舊了該重新抓，不然使用者剛存檔，
 //    畫面卻還是顯示舊資料。
 //
-// ⚠️ 型別說明（本次新增）：
+// ⚠️ 型別說明（本次調整）：
 // Notion 資料庫紀錄的欄位因為是動態依 physioFieldsConfig/dietFieldsConfig
 // 產生，這裡統一用寬鬆的 NotionRecord（Record<string, any>）表示單筆紀錄，
-// 而不是為每個資料庫都定義嚴格的 interface。所有回傳 records 的 hook 都明確
-// 標註成 NotionRecord[] | null（或 NotionRecord[]），這樣元件端寫
-// records.map((record) => ...) 時，record 會自動被推斷成 NotionRecord，
-// 不會被 TypeScript 判定成隱式 any 而擋住建置
-// （即 "Parameter 'record' implicitly has an 'any' type" 這類錯誤）。
+// 而不是為每個資料庫都定義嚴格的 interface。
+//
+// 帶泛型的 hook（useDietSummary<T>、usePhysioSummary<T> 等）允許呼叫端依照
+// 自己實際要用的計算函式所需要的型別，自己指定 T，例如：
+//   const { records } = useDietSummary<DietRecordRaw>(days)
+// 如果呼叫端沒有特別指定，預設就是 NotionRecord，行為跟原本一樣。
+//
+// 轉型統一用 `as unknown as T[]`（先轉成 unknown 再轉成目標型別），這是刻意
+// 放寬的寫法：目的是避免呼叫端自訂的嚴格 interface（例如某元件定義了
+// DietRecordRaw 要求必填 createdTime 等欄位）跟這裡的 NotionRecord 產生
+// "缺少某個必填屬性" 這類編譯期錯誤。畢竟這些欄位實際上是不是真的存在，
+// 取決於後端 API 有沒有回傳，不是這個檔案能保證的事，這裡只負責提供一個
+// 「型別上過得去、執行期照樣拿到真實資料」的彈性層。如果之後某個元件用到
+// 某個欄位卻發現是 undefined，那是要回頭檢查對應 API route 有沒有回傳該
+// 欄位，跟這裡的轉型寫法無關。
 
 import useSWR, { SWRConfiguration, mutate as globalMutate } from 'swr'
 
@@ -91,10 +101,10 @@ const dateListConfig: SWRConfiguration = {
 // 寫入後怎麼處理：個人資料更新後，呼叫下方的 invalidateProfileCaches()，
 // 不要只呼叫這個 hook 自己的 mutate，因為 profile 改變通常也會影響
 // profile-target 跟 weight-projection（見下方說明）。
-export function useProfile() {
+export function useProfile<T = NotionRecord>() {
   const { data, error, isLoading } = useSWR('/api/profile', fetcher, defaultConfig)
   return {
-    profile: (data?.record ?? null) as NotionRecord | null,
+    profile: (data?.record ?? null) as unknown as T | null,
     isLoading,
     error,
   }
@@ -108,10 +118,10 @@ export function useProfile() {
 // 清單」才會需要它；單日檢視請用下面的 useDietRecordsByDate(date)。
 //
 // 寫入後怎麼處理：新增/刪除飲食紀錄後，呼叫下方的 invalidateDietCaches(date)。
-export function useDietRecords(days: number = 30) {
+export function useDietRecords<T = NotionRecord>(days: number = 30) {
   const { data, error, isLoading } = useSWR(`/api/diet?days=${days}`, fetcher, defaultConfig)
   return {
-    records: (data?.records ?? []) as NotionRecord[],
+    records: (data?.records ?? []) as unknown as T[],
     isLoading,
     error,
   }
@@ -140,14 +150,14 @@ export function useDietRecords(days: number = 30) {
 //
 // 寫入後怎麼處理：新增/編輯/刪除當天紀錄後，呼叫 invalidateDietCaches(date)，
 // 這個 date 一定要跟被異動的那筆紀錄的記錄日期一致，才能讓這裡的 key 對上。
-export function useDietRecordsByDate(date: string | null) {
+export function useDietRecordsByDate<T = NotionRecord>(date: string | null) {
   const { data, error, isLoading } = useSWR(
     date ? `/api/diet?date=${date}` : null,
     fetcher,
     dateListConfig
   )
   return {
-    records: (data?.records ?? null) as NotionRecord[] | null,
+    records: (data?.records ?? null) as unknown as T[] | null,
     isLoading,
     error,
   }
@@ -160,10 +170,10 @@ export function useDietRecordsByDate(date: string | null) {
 // 目前已使用的地方：TodayPhysioSummary.tsx
 //
 // 寫入後怎麼處理：新增/編輯/刪除生理紀錄後，呼叫 invalidatePhysioCaches()。
-export function usePhysioRecords(days: number = 30) {
+export function usePhysioRecords<T = NotionRecord>(days: number = 30) {
   const { data, error, isLoading } = useSWR(`/api/physio?days=${days}`, fetcher, defaultConfig)
   return {
-    records: (data?.records ?? []) as NotionRecord[],
+    records: (data?.records ?? []) as unknown as T[],
     isLoading,
     error,
   }
@@ -184,14 +194,14 @@ export function usePhysioRecords(days: number = 30) {
 //
 // 寫入後怎麼處理：新增/編輯/刪除生理紀錄後，呼叫 invalidatePhysioCaches(date)，
 // date 帶上被異動那筆紀錄的日期，這樣單日飲水量才會一起刷新。
-export function usePhysioRecordsByDate(date: string | null) {
+export function usePhysioRecordsByDate<T = NotionRecord>(date: string | null) {
   const { data, error, isLoading } = useSWR(
     date ? `/api/physio?date=${date}` : null,
     fetcher,
     dateListConfig
   )
   return {
-    records: (data?.records ?? null) as NotionRecord[] | null,
+    records: (data?.records ?? null) as unknown as T[] | null,
     isLoading,
     error,
   }
@@ -203,14 +213,14 @@ export function usePhysioRecordsByDate(date: string | null) {
 // 對應 API：GET /api/dashboard/weight-projection
 // ⚠️ 注意：components/WeightProjectionCard.tsx 目前是自己另外寫
 // useEffect + fetch，完全沒用到這個 hook，建議改成呼叫這裡。
-export function useWeightProjection() {
+export function useWeightProjection<T = NotionRecord>() {
   const { data, error, isLoading } = useSWR(
     '/api/dashboard/weight-projection',
     fetcher,
     defaultConfig
   )
   return {
-    projection: (data ?? null) as NotionRecord | null,
+    projection: (data ?? null) as unknown as T | null,
     isLoading,
     error,
   }
@@ -251,14 +261,18 @@ export function useProfileTarget() {
 // ----------------------------------------------------------------------------
 // 對應 API：GET /api/dashboard/diet-summary?days=N
 // 建議套用的地方：DietDashboard.tsx、WaterCaffeineChart.tsx
-export function useDietSummary(days: number) {
+//
+// 支援泛型：如果呼叫端有自己的嚴格 interface（例如 DietDashboard.tsx 的
+// DietRecordRaw），可以這樣指定，records 就會直接是該型別，不用另外轉型：
+//   const { records } = useDietSummary<DietRecordRaw>(days)
+export function useDietSummary<T = NotionRecord>(days: number) {
   const { data, error, isLoading } = useSWR(
     `/api/dashboard/diet-summary?days=${days}`,
     fetcher,
     defaultConfig
   )
   return {
-    records: (data?.records ?? null) as NotionRecord[] | null,
+    records: (data?.records ?? null) as unknown as T[] | null,
     isLoading,
     error,
   }
@@ -275,14 +289,17 @@ export function useDietSummary(days: number) {
 // 只回傳 records 會讓 BMI 圖表永遠拿不到身高、判斷失效。
 //
 // 建議套用的地方：PhysioDashboard.tsx、WaterToiletChart.tsx、WaterCaffeineChart.tsx
-export function usePhysioSummary(days: number) {
+//
+// 支援泛型，用法跟 useDietSummary<T> 一樣：
+//   const { records } = usePhysioSummary<PhysioRecordRaw>(days)
+export function usePhysioSummary<T = NotionRecord>(days: number) {
   const { data, error, isLoading } = useSWR(
     `/api/dashboard/physio-summary?days=${days}`,
     fetcher,
     defaultConfig
   )
   return {
-    records: (data?.records ?? null) as NotionRecord[] | null,
+    records: (data?.records ?? null) as unknown as T[] | null,
     heightCm: data?.heightCm ?? null,
     isLoading,
     error,
@@ -395,8 +412,8 @@ export async function invalidateProfileCaches() {
 // 讓 physio-summary、單日資料、weight-projection 也一併更新。
 import { useState as useStateForPagination, useCallback as useCallbackForPagination, useEffect as useEffectForPagination } from 'react'
 
-export function usePhysioRecordsPaginated(pageSize: number = 50) {
-  const [records, setRecords] = useStateForPagination<NotionRecord[]>([])
+export function usePhysioRecordsPaginated<T = NotionRecord>(pageSize: number = 50) {
+  const [records, setRecords] = useStateForPagination<T[]>([])
   const [cursor, setCursor] = useStateForPagination<string | null>(null)
   const [hasMore, setHasMore] = useStateForPagination(true)
   const [isLoading, setIsLoading] = useStateForPagination(true)

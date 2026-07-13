@@ -15,6 +15,14 @@
 // 違背 SWR「背景更新不打斷畫面」的設計初衷。這裡改成只在
 // 「calorieTarget 仍是初始 fallback 值 1600 且 targetRatioText 為 null」
 // 且「isTargetLoading 為 true」時，才視為真正的首次載入中。
+//
+// ⚠️ 型別說明（本次調整）：
+// useDietSummary 現在是泛型 hook（見 useNotionData.ts），預設回傳
+// NotionRecord[]（寬鬆型別），但下方 summarizeToday()/bucketByDay()（定義在
+// lib/dashboard/aggregateDiet.ts）要求的參數型別是 DietRecordRaw[]（必填
+// createdTime 等欄位）。這裡明確指定 useDietSummary<DietRecordRaw>(days)，
+// 讓 records 直接是正確型別，不需要在呼叫 summarizeToday/bucketByDay 時
+// 另外轉型。
 
 import { useMemo } from 'react'
 import CalorieTrendChart from './charts/CalorieTrendChart'
@@ -27,6 +35,7 @@ import {
   bucketByDay,
   summarizeToday,
   hasAnyExtraIntake,
+  type DietRecordRaw,
 } from '@/lib/dashboard/aggregateDiet'
 import { useDietSummary, useProfileTarget } from '@/lib/hooks/useNotionData'
 import LoadingSpinner from './LoadingSpinner'
@@ -40,7 +49,7 @@ export default function DietDashboard({ days }: Props) {
     records,
     isLoading: isSummaryLoading,
     error: summaryError,
-  } = useDietSummary(days)
+  } = useDietSummary<DietRecordRaw>(days)
 
   const {
     calorieTarget,
