@@ -12,7 +12,7 @@
 // 不是巢狀的 projection.xxx。這裡重新命名為 data，避免跟內部的
 // data.projection（週數/日期等實際預估細節）搞混。
 
-import LoadingSpinner from './LoadingSpinner'
+import LoadingSpinner from '@/components/LoadingSpinner'
 import { useWeightProjection } from '@/lib/hooks/useNotionData'
 
 interface ProjectionData {
