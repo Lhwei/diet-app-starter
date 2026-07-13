@@ -214,7 +214,7 @@ export default function DietRecordList() {
             )}
 
             <div className="space-y-3">
-              {safeRecords.map((record) => (
+              {safeRecords.map((record: any) => (
                 <SwipeableRecordCard
                   key={record.id}
                   onEdit={() => setEditingRecord(record)}

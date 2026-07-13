@@ -23,8 +23,22 @@
 //    之後，一定要呼叫本檔案下方對應的 invalidate 函式（見「快取失效輔助
 //    函式」區塊），通知 SWR 哪些資料舊了該重新抓，不然使用者剛存檔，
 //    畫面卻還是顯示舊資料。
+//
+// ⚠️ 型別說明（本次新增）：
+// Notion 資料庫紀錄的欄位因為是動態依 physioFieldsConfig/dietFieldsConfig
+// 產生，這裡統一用寬鬆的 NotionRecord（Record<string, any>）表示單筆紀錄，
+// 而不是為每個資料庫都定義嚴格的 interface。所有回傳 records 的 hook 都明確
+// 標註成 NotionRecord[] | null（或 NotionRecord[]），這樣元件端寫
+// records.map((record) => ...) 時，record 會自動被推斷成 NotionRecord，
+// 不會被 TypeScript 判定成隱式 any 而擋住建置
+// （即 "Parameter 'record' implicitly has an 'any' type" 這類錯誤）。
 
 import useSWR, { SWRConfiguration, mutate as globalMutate } from 'swr'
+
+// Notion 資料庫單筆紀錄的寬鬆型別：欄位是動態的（依 dietFieldsConfig／
+// physioFieldsConfig 定義），不特別為每個資料庫寫嚴格 interface，只保證
+// 一定會有 id 欄位（Notion page id，各元件用來當 React key／辨識紀錄）。
+export type NotionRecord = Record<string, any> & { id: string }
 
 // ----------------------------------------------------------------------------
 // fetcher
@@ -80,7 +94,7 @@ const dateListConfig: SWRConfiguration = {
 export function useProfile() {
   const { data, error, isLoading } = useSWR('/api/profile', fetcher, defaultConfig)
   return {
-    profile: data?.record ?? null,
+    profile: (data?.record ?? null) as NotionRecord | null,
     isLoading,
     error,
   }
@@ -97,7 +111,7 @@ export function useProfile() {
 export function useDietRecords(days: number = 30) {
   const { data, error, isLoading } = useSWR(`/api/diet?days=${days}`, fetcher, defaultConfig)
   return {
-    records: data?.records ?? [],
+    records: (data?.records ?? []) as NotionRecord[],
     isLoading,
     error,
   }
@@ -133,7 +147,7 @@ export function useDietRecordsByDate(date: string | null) {
     dateListConfig
   )
   return {
-    records: data?.records ?? null,
+    records: (data?.records ?? null) as NotionRecord[] | null,
     isLoading,
     error,
   }
@@ -149,7 +163,7 @@ export function useDietRecordsByDate(date: string | null) {
 export function usePhysioRecords(days: number = 30) {
   const { data, error, isLoading } = useSWR(`/api/physio?days=${days}`, fetcher, defaultConfig)
   return {
-    records: data?.records ?? [],
+    records: (data?.records ?? []) as NotionRecord[],
     isLoading,
     error,
   }
@@ -177,7 +191,7 @@ export function usePhysioRecordsByDate(date: string | null) {
     dateListConfig
   )
   return {
-    records: data?.records ?? null,
+    records: (data?.records ?? null) as NotionRecord[] | null,
     isLoading,
     error,
   }
@@ -196,7 +210,7 @@ export function useWeightProjection() {
     defaultConfig
   )
   return {
-    projection: data ?? null,
+    projection: (data ?? null) as NotionRecord | null,
     isLoading,
     error,
   }
@@ -244,7 +258,7 @@ export function useDietSummary(days: number) {
     defaultConfig
   )
   return {
-    records: data?.records ?? null,
+    records: (data?.records ?? null) as NotionRecord[] | null,
     isLoading,
     error,
   }
@@ -268,7 +282,7 @@ export function usePhysioSummary(days: number) {
     defaultConfig
   )
   return {
-    records: data?.records ?? null,
+    records: (data?.records ?? null) as NotionRecord[] | null,
     heightCm: data?.heightCm ?? null,
     isLoading,
     error,
@@ -382,7 +396,7 @@ export async function invalidateProfileCaches() {
 import { useState as useStateForPagination, useCallback as useCallbackForPagination, useEffect as useEffectForPagination } from 'react'
 
 export function usePhysioRecordsPaginated(pageSize: number = 50) {
-  const [records, setRecords] = useStateForPagination<any[]>([])
+  const [records, setRecords] = useStateForPagination<NotionRecord[]>([])
   const [cursor, setCursor] = useStateForPagination<string | null>(null)
   const [hasMore, setHasMore] = useStateForPagination(true)
   const [isLoading, setIsLoading] = useStateForPagination(true)
