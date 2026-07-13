@@ -1,7 +1,19 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import LoadingSpinner from '../../components/LoadingSpinner'
+// 目標體重達成日期預估卡片
+//
+// 改用 useWeightProjection() 取代原本的 useEffect + fetch。
+// 這支 hook 跟 ProfilePageContainer.tsx 存檔後呼叫的 invalidateProfileCaches()
+// 共用同一個 SWR key（'/api/dashboard/weight-projection'），使用者更新目標
+// 體重或新增體重紀錄後，這裡會自動收到最新預估，不需要額外處理。
+//
+// ⚠️ 命名提醒：useWeightProjection() 回傳的欄位叫 projection，但它實際上是
+// 整包 API 回應（含 currentWeight/targetWeight/projection/breakthroughStrategies），
+// 不是巢狀的 projection.xxx。這裡重新命名為 data，避免跟內部的
+// data.projection（週數/日期等實際預估細節）搞混。
+
+import LoadingSpinner from './LoadingSpinner'
+import { useWeightProjection } from '@/lib/hooks/useNotionData'
 
 interface ProjectionData {
   currentWeight: number
@@ -19,30 +31,17 @@ interface ProjectionData {
 }
 
 export default function WeightProjectionCard() {
-  const [data, setData] = useState<ProjectionData | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const { projection: data, isLoading, error } = useWeightProjection() as {
+    projection: ProjectionData | null
+    isLoading: boolean
+    error: Error | undefined
+  }
 
-  useEffect(() => {
-    async function load() {
-      try {
-        const res = await fetch('/api/dashboard/weight-projection')
-        if (!res.ok) {
-          const body = await res.json()
-          throw new Error(body.error || '讀取失敗')
-        }
-        setData(await res.json())
-      } catch (err: any) {
-        setError(err.message)
-      }
-    }
-    load()
-  }, [])
-
-  if (error === 'notion_not_ready' || error === 'profile_not_found') {
+  if (error?.message === 'notion_not_ready' || error?.message === 'profile_not_found') {
     return null // 個人資料/生理紀錄尚未就緒時，不顯示這張卡片，避免版面出現一堆錯誤訊息
   }
 
-  if (error === 'missing_weight_data') {
+  if (error?.message === 'missing_weight_data') {
     return (
       <div className="bg-white rounded-2xl shadow-sm p-5">
         <h3 className="font-semibold mb-2">目標達成日期預估</h3>
@@ -52,7 +51,11 @@ export default function WeightProjectionCard() {
   }
 
   if (error) return null
-  if (!data) return <LoadingSpinner />
+
+  // isLoading && data === null：SWR 尚無可用資料，首次載入中。
+  // 若已有快取，data 不會是 null，會直接顯示上一次資料，不會卡在 LoadingSpinner。
+  if (isLoading && data === null) return <LoadingSpinner />
+  if (!data) return null
 
   const { currentWeight, targetWeight, projection, breakthroughStrategies } = data
   const methodLabel = projection.method === 'percentage' ? '體重百分比法' : '固定公斤法'

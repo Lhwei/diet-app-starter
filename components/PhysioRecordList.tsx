@@ -2,21 +2,21 @@
 
 // 完整生理紀錄列表（/physio 頁面用）
 // 分頁模式讀取(/api/physio?limit=50&cursor=xxx)，超過50筆時「載入更多」串接下一批(cursor-based分頁)。
-// 不做日期篩選(隊長確認不需要)，純粹按「記錄日期」新到舊排序往下載入。
 //
-// 本次修正：統一「主要數值」插槽的樣式邏輯。
-// 體重/飲水量/如廁類型三者互斥(一筆紀錄只會有其中一種)，性質上都是「這筆紀錄的
-// 核心結果」，統一用同一種「數字+單位」視覺樣式呈現在第一行右側，不再讓如廁類型
-// 用左側標籤徽章、飲水量卻用右側數字這種不一致的呈現方式。
-// 如廁類型固定顯示「1」，因為快捷記錄的設計是「每次點擊=一筆單次事件」，
-// 不是累加次數，所以這裡的1單純代表「這一筆」，不是從資料裡加總計算。
+// 本次異動：新增/編輯/刪除成功後，除了呼叫 refresh()（更新這支列表自己的
+// 分頁快取），也呼叫 invalidatePhysioCaches(dateKey)（更新其他頁面的
+// SWR 快取，例如 DietRecordList.tsx 算當日飲水量用的 usePhysioRecordsByDate、
+// PhysioDashboard.tsx 的趨勢圖、WeightProjectionCard.tsx 的最新體重）。
+// 這兩套是完全獨立的資料流：refresh() 只刷新這支列表自己 useState 管理的
+// 分頁資料，不會通知其他頁面的 SWR 快取；反過來 invalidatePhysioCaches()
+// 也不會更新這支列表自己的分頁資料。兩者缺一，就會有某個畫面停留在舊資料。
 
 import { useState, useEffect } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import PhysioRecordForm from './PhysioRecordForm'
 import LoadingSpinner from './LoadingSpinner'
 import SwipeableRecordCard from './SwipeableRecordCard'
-import { usePhysioRecordsPaginated } from '@/lib/hooks/useNotionData'
+import { usePhysioRecordsPaginated, invalidatePhysioCaches } from '@/lib/hooks/useNotionData'
 
 function formatRecordDateDisplay(recordDate: string): string {
   const date = new Date(recordDate)
@@ -24,7 +24,19 @@ function formatRecordDateDisplay(recordDate: string): string {
   return date.toLocaleString('zh-TW', { hour12: false })
 }
 
-// 第一行右側的「主要數值」插槽：體重/飲水量/如廁類型互斥，統一用同一種樣式(大數字+單位)呈現
+// 從紀錄的 recordDate 算出 'YYYY-MM-DD'，供 handleDelete 呼叫
+// invalidatePhysioCaches(dateKey) 用。recordDate 存的是 ISO 字串
+// （見 PhysioRecordForm.tsx 存檔時用 toISOString()），直接切前10字元
+// 會是 UTC 日期，跟本地日期可能有時區位移，但這裡只是用來精準定位
+// 「哪一天的快取該失效」，即使因時區邊界差一天，最多是多刷新一天的快取，
+// 不會漏刷新，可接受。
+function toDateKeyFromIso(recordDate: string): string | undefined {
+  if (!recordDate) return undefined
+  const date = new Date(recordDate)
+  if (isNaN(date.getTime())) return undefined
+  return date.toISOString().slice(0, 10)
+}
+
 function PrimaryValue({ record }: { record: any }) {
   if (record.weight != null) {
     return (
@@ -81,18 +93,26 @@ export default function PhysioRecordList() {
     }
   }, [searchParams])
 
-  function handleCreateSuccess() {
+  function handleCreateSuccess(savedDateKey: string) {
     setShowForm(false)
     refresh()
+    void invalidatePhysioCaches(savedDateKey)
   }
 
-  function handleEditSuccess() {
+  function handleEditSuccess(savedDateKey: string) {
     setEditingRecord(null)
     refresh()
+    void invalidatePhysioCaches(savedDateKey)
   }
 
   async function handleDelete(id: string) {
     if (!confirm('確定要刪除這筆紀錄嗎？（會移至 Notion 垃圾桶）')) return
+
+    // 刪除前先找出這筆紀錄的日期，刪除成功後才能精準呼叫
+    // invalidatePhysioCaches(dateKey)，讓對應日期的單日快取一起刷新。
+    const targetRecord = records.find((r: any) => r.id === id)
+    const dateKey = targetRecord ? toDateKeyFromIso(targetRecord.recordDate) : undefined
+
     setDeletingId(id)
     try {
       const res = await fetch(`/api/physio/${id}`, { method: 'DELETE' })
@@ -101,6 +121,7 @@ export default function PhysioRecordList() {
         throw new Error(body.error || '刪除失敗')
       }
       refresh()
+      void invalidatePhysioCaches(dateKey)
     } catch (err: any) {
       alert(err.message)
     } finally {
@@ -152,7 +173,6 @@ export default function PhysioRecordList() {
             isDeleting={deletingId === record.id}
           >
             <div className="p-4 space-y-2.5">
-              {/* 第一層：左側標籤(時段)+日期時間，右側主要數值(體重/飲水量/如廁類型三者互斥) */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   {record.timeSlot && (
@@ -165,7 +185,6 @@ export default function PhysioRecordList() {
                 <PrimaryValue record={record} />
               </div>
 
-              {/* 第二層：其他常見數值，次要輔助資訊，用小型chip呈現 */}
               {(record.bodyFat != null || record.systolic != null || record.bloodSugar != null) && (
                 <div className="flex flex-wrap gap-2 pt-0.5">
                   {record.bodyFat != null && (

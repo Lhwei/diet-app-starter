@@ -2,13 +2,12 @@
 
 // 生理紀錄新增/編輯表單 —— 重新設計版
 //
-// 本次重新設計重點：
-// 1. 時段標記依目前時間自動建議，使用者仍可手動點選其他時段覆蓋
-//    （「晨起」「睡前」是相對固定的作息時段，可用時間推斷；「餐前」「餐後」跟實際用餐時間點有關，
-//    不是固定時鐘區間，因此不強行猜測，交由使用者自行選擇，避免亂猜造成誤導）
-// 2. 所有 select / multi_select 欄位改成點擊式選項卡（chip group），不再使用原生 <select> 下拉選單
-// 3. 資訊層級重新分區：時段 → 常追蹤的體位/心血管/血糖代謝/生活習慣（放前面，使用頻率高）
-//    → 健檢類數值（血脂/糖化/骨骼肌力/腎肝功能，通常半年～一年才量一次，摺疊區塊、預設收合、字級較淡）
+// 本次異動：onSuccess 改為回傳「實際存入的記錄日期」savedDateKey('YYYY-MM-DD')。
+// 原因：這支表單允許使用者把記錄日期改到別的一天（補登過去健檢報告數值），
+// 父層 PhysioRecordList.tsx 需要這個日期才能正確呼叫 invalidatePhysioCaches(date)，
+// 讓 usePhysioRecordsByDate(date)（例如DietRecordList算當日飲水量用的）跟
+// usePhysioSummary/weight-projection 一起刷新，不然只有這支列表自己的分頁
+// 快取會更新，其他頁面繼續顯示舊資料。
 
 import { useEffect, useState } from 'react'
 import { physioFields, physioFieldGroups } from '@/lib/notion/physioFieldsConfig'
@@ -16,12 +15,10 @@ import { physioFields, physioFieldGroups } from '@/lib/notion/physioFieldsConfig
 interface PhysioRecordFormProps {
   initialValues?: Record<string, any>
   recordId?: string
-  onSuccess: () => void
+  onSuccess: (savedDateKey: string) => void
   onCancel: () => void
 }
 
-// datetime-local input 需要 "YYYY-MM-DDTHH:mm" 格式，這裡做雙向轉換
-// 允許使用者手動改成過去的日期時間（例如補登之前健檢報告的數值），不需要另開新欄位
 function toDateTimeInputValue(date: Date): string {
   const pad = (n: number) => String(n).padStart(2, '0')
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
@@ -33,8 +30,13 @@ function parseRecordDate(value: any): Date {
   return isNaN(parsed.getTime()) ? new Date() : parsed
 }
 
-// 依目前時間自動建議「時段標記」：只處理作息相對固定的「晨起」「睡前」，
-// 「餐前」「餐後」跟實際用餐時間有關，不強行猜測，維持由使用者手動選擇
+// 從記錄日期時間算出對應的 'YYYY-MM-DD' 日期字串，供父層呼叫 invalidatePhysioCaches(date) 用。
+// 直接取 toDateTimeInputValue() 的前10字元，避免另外用 toISOString() 造成時區位移
+// （toDateTimeInputValue 是依本地時間格式化，toISOString 是UTC）。
+function toDateKey(date: Date): string {
+  return toDateTimeInputValue(date).slice(0, 10)
+}
+
 function suggestTimeSlotByTime(date: Date = new Date()): string | null {
   const hour = date.getHours()
   if (hour >= 5 && hour < 9) return '晨起'
@@ -184,7 +186,6 @@ function FieldControl({
   return <NumberField label={field.label} value={value} onChange={onChange} />
 }
 
-// 這幾個分類是日常高頻追蹤的數值，放在表單前段
 const PRIMARY_GROUPS = ['時段', '體位', '心血管', '血糖代謝', '生活習慣']
 
 export default function PhysioRecordForm({ initialValues, recordId, onSuccess, onCancel }: PhysioRecordFormProps) {
@@ -212,7 +213,6 @@ export default function PhysioRecordForm({ initialValues, recordId, onSuccess, o
     setValues((prev) => ({ ...prev, [key]: value }))
   }
 
-  // 每分鐘重新評估一次「晨起／睡前」自動建議，僅在新增模式且使用者尚未手動選過時段時生效
   useEffect(() => {
     if (isEditing || timeSlotTouched || !timeSlotField) return
     const timer = setInterval(() => {
@@ -229,10 +229,9 @@ export default function PhysioRecordForm({ initialValues, recordId, onSuccess, o
     setSubmitting(true)
     setError(null)
 
-    // 改用 ISO 格式（YYYY-MM-DDTHH:mm:ss）儲存記錄日期，不再用 toLocaleString('zh-TW')。
-    // 中文格式（例如 "2026/7/7 上午10:57:00"）無法被 new Date() 正確解析，也無法用文字排序反映正確時間順序，
-    // 導致儀表板判斷「最新一筆」、「90天內範圍」時全部失準。ISO格式同時解決「可解析」跟「可正確排序」兩個問題。
-    const recordDate = parseRecordDate(recordDateTime).toISOString()
+    const savedDate = parseRecordDate(recordDateTime)
+    const savedDateKey = toDateKey(savedDate)
+    const recordDate = savedDate.toISOString()
     const payload = { ...values, recordDate }
 
     try {
@@ -247,7 +246,7 @@ export default function PhysioRecordForm({ initialValues, recordId, onSuccess, o
         throw new Error(body.error || '儲存失敗')
       }
 
-      onSuccess()
+      onSuccess(savedDateKey)
     } catch (err: any) {
       setError(err.message || '發生錯誤，請稍後再試')
     } finally {
@@ -259,7 +258,6 @@ export default function PhysioRecordForm({ initialValues, recordId, onSuccess, o
     <form onSubmit={handleSubmit} className="space-y-7 bg-white rounded-2xl shadow-sm p-6">
       {error && <div className="bg-red-50 text-red-600 text-sm rounded-lg px-4 py-2">{error}</div>}
 
-      {/* 記錄日期時間：預設為目前時間，可手動改成過去日期時間，方便補登舊的健檢報告數值 */}
       <section className="space-y-2">
         <label className="block text-sm font-medium text-gray-700">記錄日期時間</label>
         <input
@@ -271,7 +269,6 @@ export default function PhysioRecordForm({ initialValues, recordId, onSuccess, o
         <p className="text-xs text-gray-400">預設為目前時間，若要補登之前健檢報告的數值，可以手動改成報告上的日期</p>
       </section>
 
-      {/* 時段：獨立放最上面，時間自動建議，使用者可手動覆蓋 */}
       {timeSlotField && (
         <section className="space-y-2">
           <FieldControl
@@ -288,7 +285,6 @@ export default function PhysioRecordForm({ initialValues, recordId, onSuccess, o
         </section>
       )}
 
-      {/* 高頻追蹤數值：體位、心血管、血糖代謝、生活習慣 */}
       {PRIMARY_GROUPS.filter((g) => g !== '時段').map((group) => {
         const fields = physioFields.filter((f) => f.group === group && f !== timeSlotField)
         if (fields.length === 0) return null
@@ -310,7 +306,6 @@ export default function PhysioRecordForm({ initialValues, recordId, onSuccess, o
         )
       })}
 
-      {/* 健檢類數值：血脂/糖化/骨骼肌力/腎肝功能，通常半年～一年才量一次，預設收合、字級較淡 */}
       {secondaryGroups.length > 0 && (
         <section className="pt-2 border-t border-gray-100">
           <button

@@ -12,6 +12,13 @@
 //    - 咖啡因：純紀錄用途，無熱量，不影響任何計算
 // 3. 改用 calculateFullDietNutrition()（取代原本的 calculateNutritionFromServings()）
 //    統一計算六大類+糖+酒精的熱量與三大營養素比例，一次算好，避免表單/儀表板各算一套
+// 4. onSuccess 改為回傳「實際存入的記錄日期」savedDateKey('YYYY-MM-DD')。
+//    原因：這支表單允許使用者把記錄日期改到別的一天（例如把 7/12 的紀錄
+//    改成 7/13），若 onSuccess 不帶出實際存檔的日期，父層（DietRecordList）
+//    只知道使用者「目前在看哪一天」，沒辦法判斷新日期是否也需要一起刷新
+//    SWR 快取，導致跨日編輯後其中一天顯示過期資料。這支表單本身仍然是
+//    純寫入元件，不使用 SWR；SWR 只用於讀取，寫入完全交由父層的
+//    invalidateDietCaches() 處理。
 
 import { useEffect, useState } from 'react'
 import { dietFields } from '@/lib/notion/dietFieldsConfig'
@@ -25,7 +32,7 @@ import PortionGuideHint from '@/components/PortionGuideHint'
 interface DietRecordFormProps {
   initialValues?: Record<string, any>
   recordId?: string
-  onSuccess: () => void
+  onSuccess: (savedDateKey: string) => void
   onCancel: () => void
 }
 
@@ -40,6 +47,13 @@ function parseRecordDate(value: any): Date {
   if (!value) return new Date()
   const parsed = new Date(value)
   return isNaN(parsed.getTime()) ? new Date() : parsed
+}
+
+// 從記錄日期時間算出對應的 'YYYY-MM-DD' 日期字串，用於跨日編輯後
+// 通知父層該刷新哪個單日 SWR 快取。直接取 toDateTimeInputValue() 的前10字元，
+// 避免另外用 toISOString() 造成時區位移（toDateTimeInputValue 是依本地時間格式化）。
+function toDateKey(date: Date): string {
+  return toDateTimeInputValue(date).slice(0, 10)
 }
 
 function SingleChipSelect({
@@ -208,9 +222,12 @@ export default function DietRecordForm({ initialValues, onSuccess, onCancel }: D
     setError(null)
 
     try {
+      const savedDate = parseRecordDate(recordDateTime)
+      const savedDateKey = toDateKey(savedDate)
+
       const payload = {
         ...values,
-        recordDate: parseRecordDate(recordDateTime).toISOString(),
+        recordDate: savedDate.toISOString(),
         protein: computed.protein,
         fat: computed.fat,
         carb: computed.carb,
@@ -229,11 +246,13 @@ export default function DietRecordForm({ initialValues, onSuccess, onCancel }: D
       })
 
       if (!res.ok) {
-        const errBody = await res.json()
-        throw new Error(errBody.error || '儲存失敗')
+        const errBody = await res.json().catch(() => ({}))
+        throw new Error(errBody.error || errBody.message || '儲存失敗')
       }
 
-      onSuccess()
+      // 把「實際存入的記錄日期」回傳給父層，讓父層判斷是否需要同時刷新
+      // 舊日期與新日期兩個 SWR 快取（例如編輯時把日期改到別的一天）。
+      onSuccess(savedDateKey)
     } catch (err: any) {
       setError(err.message || '發生錯誤，請稍後再試')
     } finally {

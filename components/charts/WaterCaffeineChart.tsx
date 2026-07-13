@@ -6,14 +6,21 @@
 // 比拆成兩張更容易看出關聯性（例如靠咖啡因提神的那幾天，水喝得夠不夠）。
 // 飲水量(ml，連續大量)用柱狀圖走左軸；咖啡因(杯，離散小單位)用折線走右軸。
 //
-// 資料來源跨界：飲水量來自生理紀錄(physio-summary API)，咖啡因來自飲食紀錄
-// (diet-summary API)，兩者是不同資料庫。這裡獨立自己fetch兩份API並依日期合併，
-// 不影響DietDashboard/PhysioDashboard/WaterToiletChart各自既有的資料流。
+// 資料來源跨界：飲水量來自生理紀錄(usePhysioSummary)，咖啡因來自飲食紀錄
+// (useDietSummary)，兩者是不同資料庫。這裡各自呼叫獨立的 SWR hook 並依日期
+// 合併，不影響DietDashboard/PhysioDashboard/WaterToiletChart各自既有的資料流
+// ——事實上因為 SWR key 相同（同樣是 usePhysioSummary(days)/useDietSummary(days)），
+// 只要其他元件曾經用相同 days 抓過，這裡會直接吃共用快取，不會重複打 API。
+//
+// ⚠️ 容錯設計：飲水量(physio)是主資料，讀取失敗要整張圖擋掉；咖啡因(diet)
+// 讀取失敗則靜默降級成 0（維持原本行為），因為這張圖的核心是飲水量，
+// 咖啡因只是輔助資訊，不應該因為飲食API暫時出問題就讓飲水趨勢也看不到。
 
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ReferenceLine, ResponsiveContainer } from 'recharts'
-import { bucketHealthBehaviorByDay, PhysioRecordRaw } from '@/lib/dashboard/aggregatePhysio'
-import { bucketByDay, DietRecordRaw } from '@/lib/dashboard/aggregateDiet'
+import { bucketHealthBehaviorByDay } from '@/lib/dashboard/aggregatePhysio'
+import { bucketByDay } from '@/lib/dashboard/aggregateDiet'
+import { usePhysioSummary, useDietSummary } from '@/lib/hooks/useNotionData'
 import LoadingSpinner from '../LoadingSpinner'
 
 interface Props {
@@ -22,51 +29,36 @@ interface Props {
 }
 
 export default function WaterCaffeineChart({ days, targetMl = 2500 }: Props) {
-  const [physioRecords, setPhysioRecords] = useState<PhysioRecordRaw[] | null>(null)
-  const [dietRecords, setDietRecords] = useState<DietRecordRaw[] | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const {
+    records: physioRecords,
+    isLoading: isPhysioLoading,
+    error: physioError,
+  } = usePhysioSummary(days)
 
-  useEffect(() => {
-    let cancelled = false
-    async function load() {
-      setError(null)
-      try {
-        const [physioRes, dietRes] = await Promise.all([
-          fetch(`/api/dashboard/physio-summary?days=${days}`),
-          fetch(`/api/dashboard/diet-summary?days=${days}`),
-        ])
-        if (!physioRes.ok) {
-          const body = await physioRes.json()
-          throw new Error(body.error || '讀取失敗')
-        }
-        const physioData = await physioRes.json()
-        const dietData = dietRes.ok ? await dietRes.json() : { records: [] }
-        if (cancelled) return
-        setPhysioRecords(physioData.records)
-        setDietRecords(dietData.records ?? [])
-      } catch (err: any) {
-        if (!cancelled) setError(err.message)
-      }
-    }
-    load()
-    return () => { cancelled = true }
-  }, [days])
+  const {
+    records: dietRecords,
+    error: dietError,
+  } = useDietSummary(days)
+
+  // 咖啡因讀取失敗時靜默降級成空陣列，維持原本「diet API 失敗不擋圖」的行為。
+  const safeDietRecords = dietError ? [] : (dietRecords ?? [])
 
   const chartData = useMemo(() => {
-    if (!physioRecords || !dietRecords) return []
+    if (!physioRecords) return []
     const waterBuckets = bucketHealthBehaviorByDay(physioRecords, days)
-    const caffeineBuckets = bucketByDay(dietRecords, days)
+    const caffeineBuckets = bucketByDay(safeDietRecords, days)
     const caffeineByDate = new Map(caffeineBuckets.map((b) => [b.date, b.caffeineServings]))
     return waterBuckets.map((b) => ({
       label: b.label,
       飲水量: b.waterIntake,
       咖啡因: caffeineByDate.get(b.date) ?? 0,
     }))
-  }, [physioRecords, dietRecords, days])
+  }, [physioRecords, safeDietRecords, days])
 
-  if (error === 'notion_not_ready') return null
-  if (error) return <p className="text-red-600 text-sm">飲水/咖啡因資料讀取失敗：{error}</p>
-  if (physioRecords === null || dietRecords === null) return <LoadingSpinner />
+  if (physioError?.message === 'notion_not_ready') return null
+  if (physioError) return <p className="text-red-600 text-sm">飲水/咖啡因資料讀取失敗：{physioError.message}</p>
+  if (isPhysioLoading && physioRecords === null) return <LoadingSpinner />
+  if (physioRecords === null) return null
 
   const totalWater = chartData.reduce((sum, d) => sum + d.飲水量, 0)
   const totalCaffeine = chartData.reduce((sum, d) => sum + d.咖啡因, 0)
