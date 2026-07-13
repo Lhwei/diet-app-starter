@@ -42,7 +42,7 @@ export default function WeekCalendarHeader({ selectedDate, onSelectDate }: WeekC
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-1 md:space-y-2">
       <div className="relative flex items-center justify-center">
         <button
           onClick={() => setShowYearMonthPicker((v) => !v)}

@@ -181,10 +181,10 @@ export default function DailyNutritionSummary({
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm p-5">
-      <h3 className="text-xs font-semibold text-gray-500 mb-4">當日飲食摘要</h3>
+    <div className="bg-white rounded-2xl shadow-sm px-5 py-2 md:py-5">
+      <h3 className="text-xs font-semibold text-gray-500 mb-2">當日飲食摘要</h3>
 
-      <div className="space-y-5">
+      <div className="space-y-2 md:space-y-4">
         {/* 第一排：熱量 + 飲水量，兩個「總量型」指標 */}
         <div className="grid grid-cols-2 gap-5">
           <MetricBar label="熱量" unit="kcal" consumed={consumedCalories} target={calorieTarget} />

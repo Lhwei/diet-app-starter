@@ -12,11 +12,18 @@
 //    ├─ waterIntakeMl
 //    └─ latestWeightKg
 //
-// 本次異動：新增紀錄時，「記錄日期時間」欄位預設帶入「目前瀏覽的週曆日期」
-// + 「現在的時分」，而不是單純 new Date()（今天）。原因：DietRecordForm
-// 沒收到 initialValues 時，內部會用 new Date() 當預設日期，導致使用者
-// 瀏覽 7/10 時點新增，表單卻預設顯示今天（例如 7/13），一不注意就把紀錄
-// 存到錯誤的一天，畫面上（仍停留在 7/10）也看不到剛新增的紀錄。
+// 本次異動（UI-only，資料邏輯完全不動）：
+// WeekCalendarHeader + DailyNutritionSummary 一起包進同一個 sticky top-0
+// 容器，滑動紀錄列表時兩者常駐頂部不被推走。原因：飲食紀錄是「以日期為
+// 主軸瀏覽」的介面，週曆本身是主要導航元件，理應隨時可見；當日摘要則讓
+// 使用者滑到列表任何位置都能掌握今天的熱量/飲水進度，不需要滑回最上面。
+// 兩者包在同一個容器裡一起 sticky（而非各自 sticky），是為了避免手動計算
+// 第二個元件的 top 偏移量（需精準等於第一個元件的高度），日後任一元件
+// 高度變動都要同步改另一處 top 值，容易出錯又難維護。
+//
+// z-20 是為了蓋過紀錄列表本身（列表本身沒有設 z-index，預設為
+// auto，實際疊放順序看 DOM順序，此處明確設定 z-index 避免列表卡片的陰影
+// 或其他堆疊上下文意外蓋到 sticky 容器上方）。
 
 import { useEffect, useState } from 'react'
 import DietRecordForm from './DietRecordForm'
@@ -33,11 +40,6 @@ import {
 } from '@/lib/hooks/useNotionData'
 import { useSearchParams, useRouter } from 'next/navigation'
 
-// 新增紀錄時，「記錄日期時間」欄位預設帶入「目前瀏覽的週曆日期」+「現在的
-// 時分」，而不是單純的 new Date()（今天）。這樣使用者在瀏覽 7/10 時點新增，
-// 表單日期會直接顯示 7/10 而非今天，避免不小心把紀錄存到錯誤的一天。
-// 仍保留「現在的時分」而非固定 00:00，是為了讓 mealType 的時段自動建議
-// （suggestMealTypeByTime）維持準確，且使用者仍可手動調整成補登的實際時間。
 function buildDefaultRecordDate(selectedDate: Date): Date {
   const now = new Date()
   const result = new Date(selectedDate)
@@ -67,9 +69,6 @@ export default function DietRecordList() {
     error: physioError,
   } = usePhysioRecordsByDate(dateKey)
 
-  // 找「最近一次有體重數值」的紀錄，用來動態算飲水量目標範圍（體重*30~40）。
-  // 這跟上面「當日飲水量」是完全不同的查詢：不限於選取日期，只看時間上最新一筆有體重的紀錄，
-  // 所以不能沿用 usePhysioRecordsByDate(dateKey) 的結果。
   const {
     records: recentPhysioRecords,
     isLoading: isWeightLoading,
@@ -91,7 +90,6 @@ export default function DietRecordList() {
     return Number(sorted[0].weight)
   })()
 
-  // 讓「飲食紀錄」頁面能被 ?new=1 觸發開表單
   useEffect(() => {
     if (searchParams.get('new') === '1') {
       setShowForm(true)
@@ -99,10 +97,6 @@ export default function DietRecordList() {
     }
   }, [searchParams, router])
 
-  // 新增紀錄：savedDateKey 是表單實際存入的記錄日期。因為新增表單現在會
-  // 預帶「目前瀏覽的週曆日期」，正常情況下 savedDateKey 會等於 dateKey；
-  // 但使用者仍可能手動把日期改成別的一天（例如臨時想補登昨天），所以這裡
-  // 保留跟編輯一致的雙日期刷新邏輯，不假設兩者必然相同。
   function handleCreateSuccess(savedDateKey: string) {
     setShowForm(false)
     void invalidateDietCaches(savedDateKey)
@@ -111,10 +105,6 @@ export default function DietRecordList() {
     }
   }
 
-  // 編輯紀錄：表單允許使用者把記錄日期改到別的一天（例如把 7/12 的紀錄
-  // 改成 7/13）。savedDateKey 是編輯後實際存入的日期，若跟目前畫面看的
-  // dateKey 不同，代表這筆紀錄跨日搬動了，舊日期跟新日期的單日快取都要
-  // 刷新：舊日期要讓這筆紀錄消失，新日期要讓這筆紀錄出現。
   function handleEditSuccess(savedDateKey: string) {
     setEditingRecord(null)
 
@@ -141,7 +131,6 @@ export default function DietRecordList() {
         throw new Error(body.error || body.message || '刪除失敗')
       }
 
-      // 不手動 setRecords 過濾；統一由 SWR 重新驗證快取資料。
       void invalidateDietCaches(dateKey)
     } catch (err: any) {
       alert(err.message || '刪除失敗')
@@ -150,13 +139,8 @@ export default function DietRecordList() {
     }
   }
 
-  // records 為 null：SWR 尚無該日期可用資料。
-  // records 為 []：API 已成功回應，但這天確實沒有紀錄。
   const safeRecords = records ?? []
 
-  // 飲水資料是輔助資訊；生理 API 暫時失敗時，不應阻擋飲食紀錄與營養摘要顯示。
-  // 這裡不完全信任 API 已經依日期篩好，額外用 recordDate 再次過濾，
-  // 避免後端篩選邏輯有誤或日期格式含時間戳記造成加總到別天的資料。
   const waterIntakeMl = physioError
     ? null
     : (physioRecords ?? [])
@@ -168,18 +152,25 @@ export default function DietRecordList() {
 
   const isInitialLoading = isLoading && records === null
 
-  return (
-    <div className="space-y-5">
-      <WeekCalendarHeader
-        selectedDate={selectedDate}
-        onSelectDate={setSelectedDate}
-      />
+  const showSummary =
+    !isInitialLoading &&
+    !error &&
+    !editingRecord &&
+    !showForm &&
+    records !== null
 
-      {!isInitialLoading &&
-        !error &&
-        !editingRecord &&
-        !showForm &&
-        records !== null && (
+  return (
+    <div>
+      {/* sticky 容器：週曆 + 當日摘要一起常駐頂部，內部維持一般排列，
+          間距用 gap-2 (0.5rem) 取代原本較寬的 space-y-5，讓整塊常駐區域
+          在直向空間有限的手機畫面上盡量精簡，把可視高度留給下方列表 */}
+      <div className="sticky md:static top-1 z-20 bg-gray-50 pb-2 -mx-4 px-4 space-y-2 md:space-y-4">
+        <WeekCalendarHeader
+          selectedDate={selectedDate}
+          onSelectDate={setSelectedDate}
+        />
+
+        {showSummary && (
           <DailyNutritionSummary
             records={safeRecords}
             waterIntakeMl={waterIntakeMl}
@@ -188,113 +179,116 @@ export default function DietRecordList() {
             isWeightLoading={isWeightLoading}
           />
         )}
+      </div>
 
-      {isInitialLoading ? (
-        <LoadingSpinner />
-      ) : error?.message === 'notion_not_ready' ? (
-        <div className="bg-yellow-50 text-yellow-700 rounded-xl p-4 text-sm">
-          Notion 尚未完成連結或初始化，請先到「設定」頁面完成 Notion 連結。
-        </div>
-      ) : error ? (
-        <p className="text-red-600">
-          讀取失敗：{error.message}
-        </p>
-      ) : editingRecord ? (
-        <DietRecordForm
-          recordId={editingRecord.id}
-          initialValues={editingRecord}
-          onSuccess={handleEditSuccess}
-          onCancel={() => setEditingRecord(null)}
-        />
-      ) : showForm ? (
-        <DietRecordForm
-          initialValues={{ recordDate: buildDefaultRecordDate(selectedDate) }}
-          onSuccess={handleCreateSuccess}
-          onCancel={() => setShowForm(false)}
-        />
-      ) : (
-        <div className="space-y-4">
-          {safeRecords.length === 0 && (
-            <p className="text-gray-400">
-              這天還沒有任何紀錄，點上面按鈕新增第一筆吧！
-            </p>
-          )}
+      <div className="pt-2">
+        {isInitialLoading ? (
+          <LoadingSpinner />
+        ) : error?.message === 'notion_not_ready' ? (
+          <div className="bg-yellow-50 text-yellow-700 rounded-xl p-4 text-sm">
+            Notion 尚未完成連結或初始化，請先到「設定」頁面完成 Notion 連結。
+          </div>
+        ) : error ? (
+          <p className="text-red-600">
+            讀取失敗：{error.message}
+          </p>
+        ) : editingRecord ? (
+          <DietRecordForm
+            recordId={editingRecord.id}
+            initialValues={editingRecord}
+            onSuccess={handleEditSuccess}
+            onCancel={() => setEditingRecord(null)}
+          />
+        ) : showForm ? (
+          <DietRecordForm
+            initialValues={{ recordDate: buildDefaultRecordDate(selectedDate) }}
+            onSuccess={handleCreateSuccess}
+            onCancel={() => setShowForm(false)}
+          />
+        ) : (
+          <div className="space-y-4">
+            {safeRecords.length === 0 && (
+              <p className="text-gray-400">
+                這天還沒有任何紀錄，點上面按鈕新增第一筆吧！
+              </p>
+            )}
 
-          <div className="space-y-3">
-            {safeRecords.map((record) => (
-              <SwipeableRecordCard
-                key={record.id}
-                onEdit={() => setEditingRecord(record)}
-                onDelete={() => handleDelete(record.id)}
-                isDeleting={deletingId === record.id}
-              >
-                <div className="p-4 space-y-2.5">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      {record.mealType && (
-                        <span className="inline-flex items-center rounded-full bg-gray-900 text-white text-xs font-medium px-2.5 py-1">
-                          {record.mealType}
+            <div className="space-y-3">
+              {safeRecords.map((record) => (
+                <SwipeableRecordCard
+                  key={record.id}
+                  onEdit={() => setEditingRecord(record)}
+                  onDelete={() => handleDelete(record.id)}
+                  isDeleting={deletingId === record.id}
+                >
+                  <div className="p-4 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        {record.mealType && (
+                          <span className="inline-flex items-center rounded-full bg-gray-900 text-white text-xs font-medium px-2.5 py-1">
+                            {record.mealType}
+                          </span>
+                        )}
+
+                        <span className="text-xs text-gray-400">
+                          {record.recordTitle}
+                        </span>
+                      </div>
+
+                      {record.calories != null && (
+                        <span className="text-base font-bold text-gray-900">
+                          {record.calories}
+                          <span className="text-xs font-normal text-gray-400 ml-0.5">
+                            kcal
+                          </span>
                         </span>
                       )}
-
-                      <span className="text-xs text-gray-400">
-                        {record.recordTitle}
-                      </span>
                     </div>
 
-                    {record.calories != null && (
-                      <span className="text-base font-bold text-gray-900">
-                        {record.calories}
-                        <span className="text-xs font-normal text-gray-400 ml-0.5">
-                          kcal
-                        </span>
-                      </span>
+                    {record.foodContent && (
+                      <p className="text-sm text-gray-800 leading-relaxed">
+                        {record.foodContent}
+                      </p>
+                    )}
+
+                    {(record.protein != null ||
+                      record.fat != null ||
+                      record.carb != null) && (
+                      <div className="flex gap-2 pt-0.5">
+                        {record.protein != null && (
+                          <span
+                            className={`text-xs rounded-md px-2 py-1 font-medium ${
+                              Number(record.protein) < 20
+                                ? 'bg-amber-50 text-amber-700'
+                                : Number(record.protein) > 40
+                                  ? 'bg-red-50 text-red-700'
+                                  : 'bg-gray-50 text-gray-600'
+                            }`}
+                          >
+                            蛋白質 {record.protein}g
+                          </span>
+                        )}
+
+                        {record.fat != null && (
+                          <span className="text-xs rounded-md px-2 py-1 font-medium bg-gray-50 text-gray-600">
+                            脂質 {record.fat}g
+                          </span>
+                        )}
+
+                        {record.carb != null && (
+                          <span className="text-xs rounded-md px-2 py-1 font-medium bg-gray-50 text-gray-600">
+                            碳水 {record.carb}g
+                          </span>
+                        )}
+                      </div>
                     )}
                   </div>
-
-                  {record.foodContent && (
-                    <p className="text-sm text-gray-800 leading-relaxed">
-                      {record.foodContent}
-                    </p>
-                  )}
-
-                  {(record.protein != null ||
-                    record.fat != null ||
-                    record.carb != null) && (
-                    <div className="flex gap-2 pt-0.5">
-                      {record.protein != null && (
-                        <span
-                          className={`text-xs rounded-md px-2 py-1 font-medium ${
-                            Number(record.protein) < 20
-                              ? 'bg-amber-50 text-amber-700'
-                              : Number(record.protein) > 40
-                                ? 'bg-red-50 text-red-700'
-                                : 'bg-gray-50 text-gray-600'
-                          }`}
-                        >
-                          蛋白質 {record.protein}g
-                        </span>
-                      )}
-
-                      {record.fat != null && (
-                        <span className="text-xs rounded-md px-2 py-1 font-medium bg-gray-50 text-gray-600">
-                          脂質 {record.fat}g
-                        </span>
-                      )}
-
-                      {record.carb != null && (
-                        <span className="text-xs rounded-md px-2 py-1 font-medium bg-gray-50 text-gray-600">
-                          碳水 {record.carb}g
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </SwipeableRecordCard>
-            ))}
+                </SwipeableRecordCard>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }
