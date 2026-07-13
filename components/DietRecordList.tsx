@@ -164,7 +164,7 @@ export default function DietRecordList() {
       {/* sticky 容器：週曆 + 當日摘要一起常駐頂部，內部維持一般排列，
           間距用 gap-2 (0.5rem) 取代原本較寬的 space-y-5，讓整塊常駐區域
           在直向空間有限的手機畫面上盡量精簡，把可視高度留給下方列表 */}
-      <div className="sticky md:static top-1 z-20 bg-gray-50 pb-2 -mx-4 px-4 space-y-2 md:space-y-4">
+      <div className="sticky md:static top-0 z-20 bg-gray-50 py-2 -mx-4 px-4 space-y-2 md:space-y-4">
         <WeekCalendarHeader
           selectedDate={selectedDate}
           onSelectDate={setSelectedDate}

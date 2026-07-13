@@ -8,6 +8,26 @@
 // 讓 usePhysioRecordsByDate(date)（例如DietRecordList算當日飲水量用的）跟
 // usePhysioSummary/weight-projection 一起刷新，不然只有這支列表自己的分頁
 // 快取會更新，其他頁面繼續顯示舊資料。
+//
+// 本次異動（UI-only，資料邏輯完全不動）：
+// 「取消/儲存」按鈕改為固定釘在畫面底部，手機版跟桌面版都固定（跟
+// DietRecordForm.tsx 採用相同模式），理由相同：這支表單欄位很多（時段、
+// 體位、心血管、血糖代謝、生活習慣、還有可展開的健檢類數值），使用者
+// 填寫過程中不需要滑到最底才能點儲存/取消。
+//
+// ⚠️ 原本整個表單是一張卡片（bg-white rounded-2xl shadow-sm p-6 包住
+// 整個 <form>），這次把卡片樣式收進「表單主體」內層 div，按鈕區塊獨立
+// 成固定底部區塊，兩者都仍在同一個 <form> 標籤內（提交按鈕 type="submit"
+// 需要在 <form> 內才能正確觸發 handleSubmit)。
+//
+// ⚠️ 手機版 bottom-14 是為了不被 MobileBottomNav 蓋住（假設其高度為
+// 標準 h-14/h-16，fixed bottom-0 定位）；桌面版 md:bottom-0 貼齊螢幕
+// 底部，前提是桌面板沒有底部導航列。若 MobileBottomNav 實際高度不同或
+// 桌面板也有底部導航，這兩個數值需要對應調整。
+//
+// ⚠️ 表單主體補上 pb-[6rem] md:pb-[8rem]，預留底部固定按鈕區的高度，
+// 避免「健檢類數值」展開後最下方內容被蓋住點不到。這是估算值，如果按鈕
+// 區塊本身高度之後有變動（例如加了其他元素），這個 padding 需要同步調整。
 
 import { useEffect, useState } from 'react'
 import { physioFields, physioFieldGroups } from '@/lib/notion/physioFieldsConfig'
@@ -30,9 +50,6 @@ function parseRecordDate(value: any): Date {
   return isNaN(parsed.getTime()) ? new Date() : parsed
 }
 
-// 從記錄日期時間算出對應的 'YYYY-MM-DD' 日期字串，供父層呼叫 invalidatePhysioCaches(date) 用。
-// 直接取 toDateTimeInputValue() 的前10字元，避免另外用 toISOString() 造成時區位移
-// （toDateTimeInputValue 是依本地時間格式化，toISOString 是UTC）。
 function toDateKey(date: Date): string {
   return toDateTimeInputValue(date).slice(0, 10)
 }
@@ -255,115 +272,125 @@ export default function PhysioRecordForm({ initialValues, recordId, onSuccess, o
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-7 bg-white rounded-2xl shadow-sm p-6">
-      {error && <div className="bg-red-50 text-red-600 text-sm rounded-lg px-4 py-2">{error}</div>}
+    <form onSubmit={handleSubmit} className="relative">
+      {/* 表單主體：原本的卡片樣式（bg-white rounded-2xl shadow-sm p-6）
+          收進這裡，底部補 padding 讓出固定按鈕區的空間 */}
+      <div className="space-y-7 bg-white rounded-2xl shadow-sm p-6 pb-[6rem] md:pb-[8rem]">
+        {error && <div className="bg-red-50 text-red-600 text-sm rounded-lg px-4 py-2">{error}</div>}
 
-      <section className="space-y-2">
-        <label className="block text-sm font-medium text-gray-700">記錄日期時間</label>
-        <input
-          type="datetime-local"
-          value={recordDateTime}
-          onChange={(e) => setRecordDateTime(e.target.value)}
-          className="w-full sm:w-auto text-sm rounded-lg border border-gray-300 px-3 py-2"
-        />
-        <p className="text-xs text-gray-400">預設為目前時間，若要補登之前健檢報告的數值，可以手動改成報告上的日期</p>
-      </section>
-
-      {timeSlotField && (
         <section className="space-y-2">
-          <FieldControl
-            field={timeSlotField}
-            value={values[timeSlotField.key]}
-            onChange={(v) => updateValue(timeSlotField.key, v)}
-            onTimeSlotTouched={() => setTimeSlotTouched(true)}
+          <label className="block text-sm font-medium text-gray-700">記錄日期時間</label>
+          <input
+            type="datetime-local"
+            value={recordDateTime}
+            onChange={(e) => setRecordDateTime(e.target.value)}
+            className="w-full sm:w-auto text-sm rounded-lg border border-gray-300 px-3 py-2"
           />
-          {!isEditing && !timeSlotTouched && (
-            <p className="text-xs text-gray-400">
-              已依目前時間自動選擇「{values[timeSlotField.key]}」，可點選其他選項手動調整（餐前/餐後請依實際用餐時間手動選擇）
-            </p>
-          )}
+          <p className="text-xs text-gray-400">預設為目前時間，若要補登之前健檢報告的數值，可以手動改成報告上的日期</p>
         </section>
-      )}
 
-      {PRIMARY_GROUPS.filter((g) => g !== '時段').map((group) => {
-        const fields = physioFields.filter((f) => f.group === group && f !== timeSlotField)
-        if (fields.length === 0) return null
-        return (
-          <section key={group} className="space-y-3">
-            <h3 className="text-sm font-semibold text-gray-900">{group}</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {fields.map((field) => (
-                <div key={field.key} className={field.type !== 'number' ? 'sm:col-span-2' : ''}>
-                  <FieldControl
-                    field={field}
-                    value={values[field.key]}
-                    onChange={(v) => updateValue(field.key, v)}
-                  />
-                </div>
-              ))}
-            </div>
+        {timeSlotField && (
+          <section className="space-y-2">
+            <FieldControl
+              field={timeSlotField}
+              value={values[timeSlotField.key]}
+              onChange={(v) => updateValue(timeSlotField.key, v)}
+              onTimeSlotTouched={() => setTimeSlotTouched(true)}
+            />
+            {!isEditing && !timeSlotTouched && (
+              <p className="text-xs text-gray-400">
+                已依目前時間自動選擇「{values[timeSlotField.key]}」，可點選其他選項手動調整（餐前/餐後請依實際用餐時間手動選擇）
+              </p>
+            )}
           </section>
-        )
-      })}
+        )}
 
-      {secondaryGroups.length > 0 && (
-        <section className="pt-2 border-t border-gray-100">
+        {PRIMARY_GROUPS.filter((g) => g !== '時段').map((group) => {
+          const fields = physioFields.filter((f) => f.group === group && f !== timeSlotField)
+          if (fields.length === 0) return null
+          return (
+            <section key={group} className="space-y-3">
+              <h3 className="text-sm font-semibold text-gray-900">{group}</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {fields.map((field) => (
+                  <div key={field.key} className={field.type !== 'number' ? 'sm:col-span-2' : ''}>
+                    <FieldControl
+                      field={field}
+                      value={values[field.key]}
+                      onChange={(v) => updateValue(field.key, v)}
+                    />
+                  </div>
+                ))}
+              </div>
+            </section>
+          )
+        })}
+
+        {secondaryGroups.length > 0 && (
+          <section className="pt-2 border-t border-gray-100">
+            <button
+              type="button"
+              onClick={() => setShowAdvanced((v) => !v)}
+              className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-600"
+            >
+              <svg
+                className={`w-3.5 h-3.5 transition-transform ${showAdvanced ? 'rotate-90' : ''}`}
+                viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+              >
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+              健檢類數值（選填，通常半年～一年量一次）
+            </button>
+
+            {showAdvanced && (
+              <div className="mt-4 space-y-6">
+                {secondaryGroups.map((group) => {
+                  const fields = physioFields.filter((f) => f.group === group)
+                  if (fields.length === 0) return null
+                  return (
+                    <div key={group} className="space-y-3">
+                      <h4 className="text-xs font-medium text-gray-400">{group}</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {fields.map((field) => (
+                          <div key={field.key} className={field.type !== 'number' ? 'sm:col-span-2' : ''}>
+                            <FieldControl
+                              field={field}
+                              value={values[field.key]}
+                              onChange={(v) => updateValue(field.key, v)}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </section>
+        )}
+      </div>
+
+      {/* 固定底部區塊：取消/儲存按鈕，手機版跟桌面版都固定，
+          與 DietRecordForm.tsx 的固定底部按鈕採用相同模式與數值。
+          z-30 手機版桌面版都保留，避免 fixed 元素在缺少明確 z-index 時
+          被頁面上其他有設定 z-index 的元素（Modal、Toast等）意外蓋住。 */}
+      <div className="fixed bottom-14 inset-x-0 z-30 bg-white border-t border-gray-100 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] md:bottom-0 md:bg-gray-50 md:pt-4 md:pb-10">
+        <div className="flex gap-3 md:max-w-2xl md:mx-auto">
           <button
             type="button"
-            onClick={() => setShowAdvanced((v) => !v)}
-            className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-600"
+            onClick={onCancel}
+            className="flex-1 text-sm rounded-lg px-4 py-2.5 border border-gray-300 text-gray-600 hover:bg-gray-50 bg-white"
           >
-            <svg
-              className={`w-3.5 h-3.5 transition-transform ${showAdvanced ? 'rotate-90' : ''}`}
-              viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-            >
-              <polyline points="9 18 15 12 9 6" />
-            </svg>
-            健檢類數值（選填，通常半年～一年量一次）
+            取消
           </button>
-
-          {showAdvanced && (
-            <div className="mt-4 space-y-6">
-              {secondaryGroups.map((group) => {
-                const fields = physioFields.filter((f) => f.group === group)
-                if (fields.length === 0) return null
-                return (
-                  <div key={group} className="space-y-3">
-                    <h4 className="text-xs font-medium text-gray-400">{group}</h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {fields.map((field) => (
-                        <div key={field.key} className={field.type !== 'number' ? 'sm:col-span-2' : ''}>
-                          <FieldControl
-                            field={field}
-                            value={values[field.key]}
-                            onChange={(v) => updateValue(field.key, v)}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </section>
-      )}
-
-      <div className="flex gap-3 pt-2">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="flex-1 text-sm rounded-lg px-4 py-2.5 border border-gray-300 text-gray-600 hover:bg-gray-50"
-        >
-          取消
-        </button>
-        <button
-          type="submit"
-          disabled={submitting}
-          className="flex-1 text-sm rounded-lg px-4 py-2.5 bg-gray-900 text-white hover:bg-gray-800 disabled:opacity-50"
-        >
-          {submitting ? '儲存中...' : isEditing ? '更新紀錄' : '新增紀錄'}
-        </button>
+          <button
+            type="submit"
+            disabled={submitting}
+            className="flex-1 text-sm rounded-lg px-4 py-2.5 bg-gray-900 text-white hover:bg-gray-800 disabled:opacity-50"
+          >
+            {submitting ? '儲存中...' : isEditing ? '更新紀錄' : '新增紀錄'}
+          </button>
+        </div>
       </div>
     </form>
   )
