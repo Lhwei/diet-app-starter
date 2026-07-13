@@ -20,6 +20,7 @@ import { useMemo } from 'react'
 import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ReferenceLine, ResponsiveContainer } from 'recharts'
 import { bucketHealthBehaviorByDay } from '@/lib/dashboard/aggregatePhysio'
 import { bucketByDay } from '@/lib/dashboard/aggregateDiet'
+import { type PhysioRecordRaw } from '@/lib/dashboard/aggregatePhysio'
 import { usePhysioSummary, useDietSummary, type DietRecordRaw } from '@/lib/hooks/useNotionData'
 import LoadingSpinner from '../LoadingSpinner'
 
@@ -33,7 +34,7 @@ export default function WaterCaffeineChart({ days, targetMl = 2500 }: Props) {
     records: physioRecords,
     isLoading: isPhysioLoading,
     error: physioError,
-  } = usePhysioSummary(days)
+  } = usePhysioSummary<PhysioRecordRaw>(days)
 
   const {
     records: dietRecords,

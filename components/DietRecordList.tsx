@@ -32,6 +32,7 @@ import WeekCalendarHeader from './WeekCalendarHeader'
 import DailyNutritionSummary from './DailyNutritionSummary'
 import SwipeableRecordCard from './SwipeableRecordCard'
 import { toDateKey } from '@/lib/date/weekUtils'
+import { type PhysioRecordRaw } from '@/lib/dashboard/aggregatePhysio'
 import {
   invalidateDietCaches,
   useDietRecordsByDate,
@@ -72,7 +73,7 @@ export default function DietRecordList() {
   const {
     records: recentPhysioRecords,
     isLoading: isWeightLoading,
-  } = usePhysioSummary(90)
+  } = usePhysioSummary<PhysioRecordRaw>(90)
 
   const latestWeightKg = (() => {
     if (!recentPhysioRecords) return null

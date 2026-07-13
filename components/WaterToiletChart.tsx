@@ -13,11 +13,18 @@
 // 這裡繼續統一計算 buckets 往下傳給 ToiletStackedBarChart，只是為了維持
 // 現有元件介面（ToiletStackedBarChart 目前吃的是算好的 buckets，不是
 // 原始 records），並非為了節省API額度。
+//
+// ⚠️ 型別說明（本次調整）：
+// usePhysioSummary 是泛型 hook（見 useNotionData.ts），預設回傳
+// NotionRecord[]（寬鬆型別），但下方 bucketHealthBehaviorByDay()（定義在
+// lib/dashboard/aggregatePhysio.ts）要求的參數型別是 PhysioRecordRaw[]（必填
+// createdTime 等欄位）。這裡明確指定 usePhysioSummary<PhysioRecordRaw>(days)，
+// 讓 records 直接是正確型別，跟 PhysioDashboard.tsx 的做法保持一致。
 
 import { useMemo } from 'react'
 import WaterCaffeineChart from './charts/WaterCaffeineChart'
 import ToiletStackedBarChart from './charts/ToiletStackedBarChart'
-import { bucketHealthBehaviorByDay } from '@/lib/dashboard/aggregatePhysio'
+import { bucketHealthBehaviorByDay, type PhysioRecordRaw } from '@/lib/dashboard/aggregatePhysio'
 import { usePhysioSummary } from '@/lib/hooks/useNotionData'
 import LoadingSpinner from './LoadingSpinner'
 
@@ -26,7 +33,7 @@ interface Props {
 }
 
 export default function WaterToiletChart({ days }: Props) {
-  const { records, isLoading, error } = usePhysioSummary(days)
+  const { records, isLoading, error } = usePhysioSummary<PhysioRecordRaw>(days)
 
   const buckets = useMemo(
     () => (records ? bucketHealthBehaviorByDay(records, days) : []),
