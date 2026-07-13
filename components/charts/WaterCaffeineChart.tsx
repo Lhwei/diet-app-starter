@@ -19,9 +19,9 @@
 import { useMemo } from 'react'
 import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ReferenceLine, ResponsiveContainer } from 'recharts'
 import { bucketHealthBehaviorByDay } from '@/lib/dashboard/aggregatePhysio'
-import { bucketByDay } from '@/lib/dashboard/aggregateDiet'
+import { bucketByDay, type DietRecordRaw } from '@/lib/dashboard/aggregateDiet'
 import { type PhysioRecordRaw } from '@/lib/dashboard/aggregatePhysio'
-import { usePhysioSummary, useDietSummary, type DietRecordRaw } from '@/lib/hooks/useNotionData'
+import { usePhysioSummary, useDietSummary } from '@/lib/hooks/useNotionData'
 import LoadingSpinner from '../LoadingSpinner'
 
 interface Props {
