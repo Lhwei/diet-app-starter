@@ -26,7 +26,7 @@ interface Props {
 }
 
 export default function WaterToiletChart({ days }: Props) {
-  const { records, isLoading, error } = usePhysioSummary(days)
+  const { records, isLoading, error } = usePhysioSummary<PhysioRecordRaw>(days)
 
   const buckets = useMemo(
     () => (records ? bucketHealthBehaviorByDay(records, days) : []),

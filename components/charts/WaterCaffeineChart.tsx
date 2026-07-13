@@ -20,7 +20,7 @@ import { useMemo } from 'react'
 import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ReferenceLine, ResponsiveContainer } from 'recharts'
 import { bucketHealthBehaviorByDay } from '@/lib/dashboard/aggregatePhysio'
 import { bucketByDay } from '@/lib/dashboard/aggregateDiet'
-import { usePhysioSummary, useDietSummary } from '@/lib/hooks/useNotionData'
+import { usePhysioSummary, useDietSummary, type DietRecordRaw } from '@/lib/hooks/useNotionData'
 import LoadingSpinner from '../LoadingSpinner'
 
 interface Props {
@@ -33,12 +33,12 @@ export default function WaterCaffeineChart({ days, targetMl = 2500 }: Props) {
     records: physioRecords,
     isLoading: isPhysioLoading,
     error: physioError,
-  } = usePhysioSummary(days)
+  } = usePhysioSummary<PhysioRecordRaw>(days)
 
   const {
     records: dietRecords,
     error: dietError,
-  } = useDietSummary(days)
+  } = useDietSummary<DietRecordRaw>(days)
 
   // 咖啡因讀取失敗時靜默降級成空陣列，維持原本「diet API 失敗不擋圖」的行為。
   const safeDietRecords = dietError ? [] : (dietRecords ?? [])

@@ -14,12 +14,19 @@
 // heightCm 的 fallback 邏輯維持原本設計：優先用生理紀錄本身量到的身高
 // （physio-summary 回傳），若使用者從未在生理紀錄裡填過身高，才退回
 // 個人資料設定裡填寫的身高（profile-target 回傳）。
+//
+// ⚠️ 型別說明（本次調整）：
+// usePhysioSummary 是泛型 hook（見 useNotionData.ts），預設回傳
+// NotionRecord[]（寬鬆型別），但下方 buildTrendPoints()（定義在
+// lib/dashboard/aggregatePhysio.ts）要求的參數型別是 PhysioRecordRaw[]（必填
+// createdTime 等欄位）。這裡明確指定 usePhysioSummary<PhysioRecordRaw>(days)，
+// 讓 records 直接是正確型別，不需要在呼叫 buildTrendPoints 時另外轉型。
 
 import WeightTrendChart from './charts/WeightTrendChart'
 import BodyFatTrendChart from './charts/BodyFatTrendChart'
 import BmiTrendChart from './charts/BmiTrendChart'
 import WaistTrendChart from './charts/WaistTrendChart'
-import { buildTrendPoints } from '@/lib/dashboard/aggregatePhysio'
+import { buildTrendPoints, type PhysioRecordRaw } from '@/lib/dashboard/aggregatePhysio'
 import LoadingSpinner from './LoadingSpinner'
 import { usePhysioSummary, useProfileTarget } from '@/lib/hooks/useNotionData'
 
@@ -33,7 +40,7 @@ export default function PhysioDashboard({ days }: Props) {
     heightCm: physioHeightCm,
     isLoading: isPhysioLoading,
     error: physioError,
-  } = usePhysioSummary(days)
+  } = usePhysioSummary<PhysioRecordRaw>(days)
 
   const {
     targetWeight,
