@@ -43,7 +43,7 @@ const navItems = [
   { key: 'add', label: '新增', href: null, icon: null },
   {
     key: 'game',
-    label: '遊戲',
+    label: '暫無',
     href: null,
     disabled: true,
     icon: (active: boolean) => (
