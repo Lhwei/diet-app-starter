@@ -97,7 +97,6 @@ export async function GET() {
     if (!targetWeight || !currentWeight) {
       return NextResponse.json({
         error: 'missing_weight_data',
-        debug: { targetWeight, latestWeightFromPhysio, startWeight, weeklyPointsCount: weeklyPoints.length },
       }, { status: 400 })
     }
 
@@ -111,7 +110,8 @@ export async function GET() {
         })
         invalidateDatabaseCache(connection.personal_db_id)
       } catch (writeErr) {
-        writeBackError = writeErr instanceof NotionApiError ? writeErr.message : String(writeErr)
+        console.error('[weight-projection] 寫回目標日期失敗:', writeErr)
+        writeBackError = 'write_back_failed'
       }
     }
 
