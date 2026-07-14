@@ -9,6 +9,11 @@
 // 3. 新增 retrieveDatabase + updateDatabaseProperties：供 patch-schema route 使用，
 //    修補既有使用者資料庫缺漏的property，全程走notionFetch封裝（401刷新token重試、
 //    429指數退避），不是額外開一條裸fetch繞過既有錯誤處理機制
+// 4. 資安修正：非401/404的Notion API錯誤（例如400/500），原本會把Notion回傳的
+//    原始body（可能含property名稱、資料庫結構等內部細節）直接包進拋出的Error message，
+//    上層 handleApiError 又原封不動轉發給前端，等於把Notion內部細節外洩給使用者。
+//    現在改成：詳細內容只用 console.error 留在伺服器log，拋出的NotionApiError
+//    一律只帶通用代碼 'notion_api_error'，前端永遠拿不到任何內部細節。
 
 import { forceRefreshNotionToken } from './tokenManager'
 import { createServiceRoleClient } from '@/lib/supabase/server'
@@ -72,7 +77,9 @@ async function notionFetch(
 
   if (!res.ok) {
     const body = await res.text()
-    throw new NotionApiError(`Notion API error ${res.status}: ${body}`, res.status)
+    // 詳細內容只留伺服器 log，絕不讓它進入拋出的 Error message
+    console.error(`[notion_api_error] status=${res.status} path=${path} body=${body}`)
+    throw new NotionApiError('notion_api_error', res.status)
   }
 
   return res.json()
@@ -105,7 +112,11 @@ export async function verifyPageOwnership(
     throw new NotionApiError('notion_not_ready', 400)
   }
 
-  const page = await retrievePage(accessToken, pageId)
+  // 這裡補上 userId，讓這一步驗證也能吃到401自動刷新token重試的保護，
+  // 跟其他所有CRUD操作（createPage、updatePageProperties等）的容錯性一致，
+  // 避免使用者剛好在token過期的瞬間執行編輯/刪除，卻在「驗證所有權」這一步
+  // 就直接失敗、看到看似隨機的401錯誤。
+  const page = await retrievePage(accessToken, pageId, userId)
   const actualDbId = page?.parent?.database_id
 
   // 這裡刻意用嚴格字串比對（去除破折號的normalize），避免Notion ID格式帶不帶dash造成誤判

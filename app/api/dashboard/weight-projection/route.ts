@@ -102,8 +102,19 @@ export async function GET() {
 
     const projection = projectWeightTarget({ currentWeight, targetWeight, weeklyPoints })
 
+    // ⚠️ 節流判斷（本次新增）：GET 本來應該是「安全、冪等」的操作，不該每次讀取
+    // 都夾帶一次寫入。原本邏輯是「只要算出projectedDate就一定PATCH」，代表每次
+    // 使用者進入儀表板、每次快取過期後重新驗證，都會多打一次Notion寫入API，
+    // 即使這次算出來的日期跟Notion裡已經存的完全一樣，也會重複寫入，浪費一次
+    // 寫入配額也拖慢這次GET的回應時間。
+    // 現在改成：寫入前先比對Notion裡目前存的「目標達成日期」跟這次新算出來的
+    // projection.projectedDate是否相同，一樣就直接跳過，不打PATCH。這樣只有
+    // 「這次算出來的日期真的變了」才會真正寫入，一般重複載入（值沒變）完全
+    // 不會有任何寫入動作，GET也就名符其實地趨近於冪等。
+    const existingProjectedDate = props?.['目標達成日期']?.date?.start ?? null
+
     let writeBackError: string | null = null
-    if (projection.projectedDate) {
+    if (projection.projectedDate && projection.projectedDate !== existingProjectedDate) {
       try {
         await updatePageProperties(accessToken, profilePage.id, {
           '目標達成日期': { date: { start: projection.projectedDate } },
