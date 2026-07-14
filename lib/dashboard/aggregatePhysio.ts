@@ -1,5 +1,7 @@
 // 趨勢分析儀表板：生理紀錄資料彙整邏輯
 
+import { toDateKey, toLabel, getDayKeyRange, getUserTimeZone } from '@/lib/date/timezone'
+
 export interface PhysioRecordRaw {
   id: string
   createdTime: string // Notion page.created_time，僅作為recordDate缺失時的備用排序依據
@@ -34,35 +36,31 @@ export interface HealthBehaviorBucket {
   poopCount: number // 當天大便次數
 }
 
-function toDateKey(isoString: string): string {
-  return new Date(isoString).toISOString().slice(0, 10)
-}
-
-function toLabel(dateKey: string): string {
-  const [, m, d] = dateKey.split('-')
-  return `${m}/${d}`
-}
-
 // 記錄的日期依據：優先用使用者填的recordDate，缺失才退回createdTime，
-// 避免補登過去日期的紀錄被誤判成「今天/當天建立」而算錯日期
-function recordDateKey(r: PhysioRecordRaw): string {
-  return toDateKey(r.recordDate || r.createdTime)
+// 避免補登過去日期的紀錄被誤判成「今天/當天建立」而算錯日期。
+// 日期key一律依指定時區（預設偵測使用者所在時區）計算，避免UTC邊界導致跨日誤判。
+function recordDateKey(r: PhysioRecordRaw, timeZone?: string): string {
+  return toDateKey(r.recordDate || r.createdTime, timeZone)
 }
 
 // 同一天若有多筆體位量測記錄，取當天最後一筆（最新量測結果）
-function dedupeByDay(records: PhysioRecordRaw[]): Map<string, PhysioRecordRaw> {
+function dedupeByDay(records: PhysioRecordRaw[], timeZone?: string): Map<string, PhysioRecordRaw> {
   const sorted = [...records].sort(
     (a, b) => new Date(a.recordDate || a.createdTime).getTime() - new Date(b.recordDate || b.createdTime).getTime()
   )
   const map = new Map<string, PhysioRecordRaw>()
   for (const r of sorted) {
-    map.set(recordDateKey(r), r)
+    map.set(recordDateKey(r, timeZone), r)
   }
   return map
 }
 
-export function buildTrendPoints(records: PhysioRecordRaw[], heightCm: number | null): TrendPoint[] {
-  const dailyMap = dedupeByDay(records)
+export function buildTrendPoints(
+  records: PhysioRecordRaw[],
+  heightCm: number | null,
+  timeZone: string = getUserTimeZone()
+): TrendPoint[] {
+  const dailyMap = dedupeByDay(records, timeZone)
   const sortedKeys = Array.from(dailyMap.keys()).sort()
 
   const points: TrendPoint[] = sortedKeys.map((key) => {
@@ -102,20 +100,22 @@ export function bmiZone(bmi: number): 'underweight' | 'normal' | 'overweight' | 
 }
 
 // 依日期分桶，加總飲水量、分類計數如廁次數，補齊選定範圍內所有日期（即使當天沒紀錄也顯示0），
-// 這樣折線圖/長條圖的X軸日期範圍才會完整，不會因為某天沒紀錄就整天消失不見
-export function bucketHealthBehaviorByDay(records: PhysioRecordRaw[], days: number): HealthBehaviorBucket[] {
+// 這樣折線圖/長條圖的X軸日期範圍才會完整，不會因為某天沒紀錄就整天消失不見。
+// 日期範圍與逐筆歸類，皆依指定時區（預設偵測使用者所在時區）計算，避免UTC邊界導致跨日誤判。
+export function bucketHealthBehaviorByDay(
+  records: PhysioRecordRaw[],
+  days: number,
+  timeZone: string = getUserTimeZone()
+): HealthBehaviorBucket[] {
   const buckets = new Map<string, HealthBehaviorBucket>()
+  const keys = getDayKeyRange(days, timeZone)
 
-  const today = new Date()
-  for (let i = days - 1; i >= 0; i--) {
-    const d = new Date(today)
-    d.setUTCDate(d.getUTCDate() - i)
-    const key = d.toISOString().slice(0, 10)
+  for (const key of keys) {
     buckets.set(key, { date: key, label: toLabel(key), waterIntake: 0, peeCount: 0, poopCount: 0 })
   }
 
   for (const r of records) {
-    const key = recordDateKey(r)
+    const key = recordDateKey(r, timeZone)
     const bucket = buckets.get(key)
     if (!bucket) continue
     bucket.waterIntake += r.waterIntake ?? 0

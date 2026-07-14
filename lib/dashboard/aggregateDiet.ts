@@ -1,5 +1,7 @@
 // 每日總覽儀表板：資料彙整邏輯（獨立成 lib，方便日後測試/複用）
 
+import { toDateKey, toLabel, getDayKeyRange, getUserTimeZone } from '@/lib/date/timezone'
+
 export interface DietRecordRaw {
   id: string
   createdTime: string // Notion page.created_time，可靠的 ISO 時間戳（記錄時間 title 只是顯示用文字，不適合拿來做日期排序）
@@ -50,24 +52,17 @@ export const foodCategoryLabels: Record<string, string> = {
   oilNuts: '油脂堅果',
 }
 
-function toDateKey(isoString: string): string {
-  const d = new Date(isoString)
-  return d.toISOString().slice(0, 10)
-}
-
-function toLabel(dateKey: string): string {
-  const [, m, d] = dateKey.split('-')
-  return `${m}/${d}`
-}
-
-export function bucketByDay(records: DietRecordRaw[], days: number): DayBucket[] {
+// 依日期分桶、加總每日熱量與各項額外攝取。日期範圍與逐筆歸類，
+// 皆依指定時區（預設偵測使用者所在時區）計算，避免UTC邊界導致凌晨記錄被歸到前一天。
+export function bucketByDay(
+  records: DietRecordRaw[],
+  days: number,
+  timeZone: string = getUserTimeZone()
+): DayBucket[] {
   const buckets = new Map<string, DayBucket>()
+  const keys = getDayKeyRange(days, timeZone)
 
-  const today = new Date()
-  for (let i = days - 1; i >= 0; i--) {
-    const d = new Date(today)
-    d.setUTCDate(d.getUTCDate() - i)
-    const key = d.toISOString().slice(0, 10)
+  for (const key of keys) {
     buckets.set(key, {
       date: key,
       label: toLabel(key),
@@ -80,7 +75,7 @@ export function bucketByDay(records: DietRecordRaw[], days: number): DayBucket[]
   }
 
   for (const r of records) {
-    const key = toDateKey(r.recordDate ?? r.createdTime)
+    const key = toDateKey(r.recordDate ?? r.createdTime, timeZone)
     const bucket = buckets.get(key)
     if (!bucket) continue
     const cal = r.calories ?? 0
@@ -108,9 +103,14 @@ export interface TodaySummary {
   sixCategory: Array<{ key: string; label: string; actual: number; suggested: number }>
 }
 
-export function summarizeToday(records: DietRecordRaw[]): TodaySummary {
-  const todayKey = new Date().toISOString().slice(0, 10)
-  const todayRecords = records.filter((r) => toDateKey(r.recordDate ?? r.createdTime) === todayKey)
+// 統計「今天」的營養攝取彙總。"今天"的判定與逐筆歸類，皆依指定時區
+// （預設偵測使用者所在時區）計算，避免凌晨記錄的一餐被UTC邊界誤判成不屬於今天。
+export function summarizeToday(
+  records: DietRecordRaw[],
+  timeZone: string = getUserTimeZone()
+): TodaySummary {
+  const todayKey = toDateKey(new Date(), timeZone)
+  const todayRecords = records.filter((r) => toDateKey(r.recordDate ?? r.createdTime, timeZone) === todayKey)
   let totalCalories = 0
   let protein = 0
   let fat = 0
