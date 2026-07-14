@@ -4,7 +4,7 @@ import { getValidNotionAccessToken } from '@/lib/notion/tokenManager'
 import { retrievePage, updatePageProperties, trashPage, verifyPageOwnership, NotionApiError } from '@/lib/notion/client'
 import { formValuesToNotionProperties, notionPageToRecord } from '@/lib/notion/dietMapper'
 import { invalidateDatabaseCache } from '@/lib/notion/queryCache'
-
+import { handleApiError } from '@/lib/api/errorResponse'
 async function getUserAndDietDbId() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

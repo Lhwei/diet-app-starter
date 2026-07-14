@@ -4,7 +4,7 @@ import { getValidNotionAccessToken } from '@/lib/notion/tokenManager'
 import { queryDatabase, createDatabasePage, updatePageProperties, trashPage, verifyPageOwnership, NotionApiError } from '@/lib/notion/client'
 import { notionPageToPhysioRecord as notionPageToRecord, formValuesToPhysioProperties as formValuesToNotionProperties } from '@/lib/notion/physioMapper'
 import { cachedQueryDatabase, invalidateDatabaseCache } from '@/lib/notion/queryCache'
-
+import { handleApiError } from '@/lib/api/errorResponse'
 async function getUserAndPhysioDbId() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

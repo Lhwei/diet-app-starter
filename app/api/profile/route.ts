@@ -5,7 +5,7 @@ import { queryDatabase, createDatabasePage, updatePageProperties, NotionApiError
 import { formValuesToProfileProperties, notionPageToProfileRecord } from '@/lib/notion/profileMapper'
 import { calculateBmr, calculateTdee, calculateBmi, suggestCalorieTarget, calculateWaterTargetRange } from '@/lib/nutrition/metabolicCalc'
 import { cachedQueryDatabase, invalidateDatabaseCache, buildCacheKey } from '@/lib/notion/queryCache'
-
+import { handleApiError } from '@/lib/api/errorResponse'
 async function getUserAndProfileDbId() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

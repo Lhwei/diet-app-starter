@@ -3,7 +3,7 @@ import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { getValidNotionAccessToken } from '@/lib/notion/tokenManager'
 import { retrieveDatabase, updateDatabaseProperties, NotionApiError } from '@/lib/notion/client'
 import { physioRecordSchema, dietRecordSchema } from '@/lib/notion/schemas'
-
+import { handleApiError } from '@/lib/api/errorResponse'
 // 修補既有使用者的Notion資料庫 property
 //
 // 背景：糖/酒精/咖啡因(飲食)、如廁類型(生理) 這幾個欄位是在使用者已經

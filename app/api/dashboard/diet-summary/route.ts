@@ -4,7 +4,7 @@ import { getValidNotionAccessToken } from '@/lib/notion/tokenManager'
 import { queryDatabase, NotionApiError } from '@/lib/notion/client'
 import { notionPageToRecord } from '@/lib/notion/dietMapper'
 import { dietRecordDateProp } from '@/lib/notion/dietFieldsConfig'
-
+import { handleApiError } from '@/lib/api/errorResponse'
 // GET /api/dashboard/diet-summary?days=14
 // 為儀表板彙整用：抓取最近 N 天的飲食紀錄（自動處理 Notion 分頁，一次回傳完整資料給前端做彙整計算）
 export async function GET(request: Request) {

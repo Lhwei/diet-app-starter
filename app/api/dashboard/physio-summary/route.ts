@@ -3,7 +3,7 @@ import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { getValidNotionAccessToken } from '@/lib/notion/tokenManager'
 import { queryDatabase, NotionApiError } from '@/lib/notion/client'
 import { notionPageToPhysioRecord } from '@/lib/notion/physioMapper'
-
+import { handleApiError } from '@/lib/api/errorResponse'
 // GET /api/dashboard/physio-summary?days=30
 // 抓取最近N天生理紀錄，供趨勢分析圖表使用（沿用飲食摘要API相同的分頁抓取邏輯）
 export async function GET(request: Request) {

@@ -9,6 +9,7 @@ import {
   breakthroughStrategies,
 } from '@/lib/nutrition/weightLossProjection'
 import { cachedQueryDatabase, invalidateDatabaseCache } from '@/lib/notion/queryCache'
+import { handleApiError } from '@/lib/api/errorResponse'
 
 export async function GET() {
   const supabase = await createClient()
