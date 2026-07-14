@@ -1,5 +1,50 @@
 /** @type {import('next').NextConfig} */
-// Next.js 16 預設用 Turbopack 建置（比 webpack 快 2-5 倍），開發與正式建置都會自動套用，
-// 這個專案目前沒有自訂 webpack 設定，因此不需要額外調整即可享有加速效果。
-const nextConfig = {};
+
+const securityHeaders = [
+  {
+    key: 'X-Frame-Options',
+    value: 'DENY',
+  },
+  {
+    key: 'X-Content-Type-Options',
+    value: 'nosniff',
+  },
+  {
+    key: 'Referrer-Policy',
+    value: 'strict-origin-when-cross-origin',
+  },
+  {
+    key: 'Strict-Transport-Security',
+    value: 'max-age=63072000; includeSubDomains; preload',
+  },
+  {
+    key: 'Permissions-Policy',
+    value: 'camera=(), microphone=(), geolocation=()',
+  },
+  {
+    key: 'Content-Security-Policy',
+    value: [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: https:",
+      "font-src 'self' data:",
+      "connect-src 'self' https://api.notion.com https://*.supabase.co",
+      "frame-ancestors 'none'",
+    ].join('; '),
+  },
+];
+
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: securityHeaders,
+      },
+    ];
+  },
+};
+
 module.exports = nextConfig;

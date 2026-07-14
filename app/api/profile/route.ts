@@ -62,10 +62,7 @@ export async function GET() {
 
     return NextResponse.json({ record: notionPageToProfileRecord(page) })
   } catch (e) {
-    if (e instanceof NotionApiError) {
-      return NextResponse.json({ error: e.message }, { status: e.status })
-    }
-    return NextResponse.json({ error: 'query_failed', message: String(e) }, { status: 500 })
+    return handleApiError(e, 'query_failed')
   }
 }
 
@@ -115,9 +112,6 @@ export async function PUT(request: Request) {
 
     return NextResponse.json({ record: notionPageToProfileRecord(page) })
   } catch (e) {
-    if (e instanceof NotionApiError) {
-      return NextResponse.json({ error: e.message }, { status: e.status })
-    }
-    return NextResponse.json({ error: 'save_failed', message: String(e) }, { status: 500 })
+    return handleApiError(e, 'query_failed')
   }
 }

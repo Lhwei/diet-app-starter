@@ -63,10 +63,7 @@ export async function GET(
     const page = await retrievePage(accessToken, id)
     return NextResponse.json({ record: notionPageToRecord(page) })
   } catch (e) {
-    if (e instanceof NotionApiError) {
-      return NextResponse.json({ error: e.message }, { status: e.status })
-    }
-    return NextResponse.json({ error: 'fetch_failed', message: String(e) }, { status: 500 })
+    return handleApiError(e, 'query_failed')
   }
 }
 
@@ -98,10 +95,7 @@ export async function PATCH(
 
     return NextResponse.json({ record: notionPageToRecord(page) })
   } catch (e) {
-    if (e instanceof NotionApiError) {
-      return NextResponse.json({ error: e.message }, { status: e.status })
-    }
-    return NextResponse.json({ error: 'update_failed', message: String(e) }, { status: 500 })
+    return handleApiError(e, 'query_failed')
   }
 }
 
@@ -129,9 +123,6 @@ export async function DELETE(
 
     return NextResponse.json({ status: 'trashed' })
   } catch (e) {
-    if (e instanceof NotionApiError) {
-      return NextResponse.json({ error: e.message }, { status: e.status })
-    }
-    return NextResponse.json({ error: 'delete_failed', message: String(e) }, { status: 500 })
+    return handleApiError(e, 'query_failed')
   }
 }

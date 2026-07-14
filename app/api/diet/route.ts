@@ -98,10 +98,7 @@ export async function GET(request: Request) {
 
       return NextResponse.json({ records, date: dateParam })
     } catch (e) {
-      if (e instanceof NotionApiError) {
-        return NextResponse.json({ error: e.message }, { status: e.status })
-      }
-      return NextResponse.json({ error: 'query_failed', message: String(e) }, { status: 500 })
+      return handleApiError(e, 'query_failed')
     }
   }
 
@@ -144,10 +141,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ records })
   } catch (e) {
-    if (e instanceof NotionApiError) {
-      return NextResponse.json({ error: e.message }, { status: e.status })
-    }
-    return NextResponse.json({ error: 'query_failed', message: String(e) }, { status: 500 })
+    return handleApiError(e, 'query_failed')
   }
 }
 
@@ -171,10 +165,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ record: notionPageToRecord(page) })
   } catch (e) {
-    if (e instanceof NotionApiError) {
-      return NextResponse.json({ error: e.message }, { status: e.status })
-    }
-    return NextResponse.json({ error: 'create_failed', message: String(e) }, { status: 500 })
+    return handleApiError(e, 'query_failed')
   }
 }
 
@@ -207,10 +198,7 @@ export async function PUT(request: Request) {
 
     return NextResponse.json({ record: notionPageToRecord(page) })
   } catch (e) {
-    if (e instanceof NotionApiError) {
-      return NextResponse.json({ error: e.message }, { status: e.status })
-    }
-    return NextResponse.json({ error: 'update_failed', message: String(e) }, { status: 500 })
+    return handleApiError(e, 'query_failed')
   }
 }
 
@@ -240,9 +228,6 @@ export async function DELETE(request: Request) {
 
     return NextResponse.json({ success: true })
   } catch (e) {
-    if (e instanceof NotionApiError) {
-      return NextResponse.json({ error: e.message }, { status: e.status })
-    }
-    return NextResponse.json({ error: 'delete_failed', message: String(e) }, { status: 500 })
+    return handleApiError(e, 'query_failed')
   }
 }

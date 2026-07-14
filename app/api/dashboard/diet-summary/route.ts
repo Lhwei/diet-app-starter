@@ -63,9 +63,6 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ records: filtered })
   } catch (e) {
-    if (e instanceof NotionApiError) {
-      return NextResponse.json({ error: e.message }, { status: e.status })
-    }
-    return NextResponse.json({ error: 'query_failed', message: String(e) }, { status: 500 })
+    return handleApiError(e, 'query_failed')
   }
 }
