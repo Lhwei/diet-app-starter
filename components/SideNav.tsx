@@ -19,7 +19,7 @@ export default function SideNav() {
           key={item.href}
           href={item.href}
           prefetch={true}
-          className="rounded-lg px-3 py-2 text-sm font-medium hover:bg-gray-100"
+          className="rounded-lg px-3 py-2 text-sm font-medium hover:bg-surface-muted"
         >
           {item.label}
         </Link>

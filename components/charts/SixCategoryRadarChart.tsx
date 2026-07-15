@@ -18,9 +18,9 @@ export default function SixCategoryRadarChart({ data }: Props) {
   const maxSuggested = Math.max(...data.map((d) => d.suggested), 1)
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm p-5">
+    <div className="bg-surface rounded-2xl shadow-sm p-5">
       <h3 className="font-semibold mb-1">今日六大類食物達成率</h3>
-      <p className="text-xs text-gray-400 mb-4">建議份數為預設參考值，尚未串接個人化目標</p>
+      <p className="text-xs text-text-subtle mb-4">建議份數為預設參考值，尚未串接個人化目標</p>
       <ResponsiveContainer width="100%" height={280}>
         <RadarChart data={chartData}>
           <PolarGrid />

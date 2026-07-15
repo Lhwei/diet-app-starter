@@ -57,7 +57,7 @@ export default function WaterCaffeineChart({ days, targetMl = 2500 }: Props) {
   }, [physioRecords, safeDietRecords, days])
 
   if (physioError?.message === 'notion_not_ready') return null
-  if (physioError) return <p className="text-red-600 text-sm">飲水/咖啡因資料讀取失敗：{physioError.message}</p>
+  if (physioError) return <p className="text-danger text-sm">飲水/咖啡因資料讀取失敗：{physioError.message}</p>
   if (isPhysioLoading && physioRecords === null) return <LoadingSpinner />
   if (physioRecords === null) return null
 
@@ -68,17 +68,17 @@ export default function WaterCaffeineChart({ days, targetMl = 2500 }: Props) {
 
   if (totalWater === 0 && totalCaffeine === 0) {
     return (
-      <div className="bg-gray-50 rounded-xl px-4 py-3 text-xs text-gray-400">
+      <div className="bg-background rounded-xl px-4 py-3 text-xs text-text-subtle">
         這段時間沒有飲水量或咖啡因攝取紀錄，先到「生理紀錄」「飲食紀錄」頁面新增看看！
       </div>
     )
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm p-4 sm:p-5">
+    <div className="bg-surface rounded-2xl shadow-sm p-4 sm:p-5">
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
         <h3 className="font-semibold">飲水量與咖啡因趨勢</h3>
-        <span className="text-xs rounded-full px-3 py-1 bg-blue-50 text-blue-600">
+        <span className="text-xs rounded-full px-3 py-1 bg-accent-soft text-accent">
           平均飲水 {avgWater}ml ・ 咖啡因累計 {Math.round(totalCaffeine * 10) / 10}杯
         </span>
       </div>

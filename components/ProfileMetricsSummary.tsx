@@ -18,8 +18,8 @@ export default function ProfileMetricsSummary() {
   if (!profile) {
     return (
       <div className="space-y-3">
-        <p className="text-sm text-gray-400">尚未填寫個人資料</p>
-        <Link href="/profile" className="inline-block text-sm text-blue-600 hover:underline">
+        <p className="text-sm text-text-subtle">尚未填寫個人資料</p>
+        <Link href="/profile" className="inline-block text-sm text-accent hover:underline">
           前往填寫個人資料 →
         </Link>
       </div>
@@ -30,24 +30,24 @@ export default function ProfileMetricsSummary() {
     <div className="space-y-4">
       <div className="flex flex-wrap gap-6 text-sm">
         <div>
-          <p className="text-gray-500">基礎代謝率 BMR</p>
+          <p className="text-text-muted">基礎代謝率 BMR</p>
           <p className="text-xl font-bold">{profile.bmr ? `${profile.bmr} kcal` : '—'}</p>
         </div>
         <div>
-          <p className="text-gray-500">每日總消耗 TDEE</p>
+          <p className="text-text-muted">每日總消耗 TDEE</p>
           <p className="text-xl font-bold">{profile.tdee ? `${profile.tdee} kcal` : '—'}</p>
         </div>
         <div>
-          <p className="text-gray-500">BMI</p>
+          <p className="text-text-muted">BMI</p>
           <p className="text-xl font-bold">{profile.bmi ?? '—'}</p>
         </div>
         <div>
-          <p className="text-gray-500">每日飲水目標</p>
+          <p className="text-text-muted">每日飲水目標</p>
           <p className="text-xl font-bold">{profile.waterTarget ? `${profile.waterTarget} ml` : '—'}</p>
         </div>
       </div>
 
-      <Link href="/profile" className="inline-block text-sm text-blue-600 hover:underline">
+      <Link href="/profile" className="inline-block text-sm text-accent hover:underline">
         查看/編輯完整個人資料 →
       </Link>
     </div>

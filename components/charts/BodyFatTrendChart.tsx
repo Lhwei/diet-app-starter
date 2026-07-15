@@ -23,24 +23,24 @@ export default function BodyFatTrendChart({ data, gender }: Props) {
 
   if (chartData.length === 0) {
     return (
-      <div className="bg-white rounded-2xl shadow-sm p-5">
+      <div className="bg-surface rounded-2xl shadow-sm p-5">
         <h3 className="font-semibold mb-4">體脂率變化</h3>
-        <p className="text-gray-400 text-sm py-12 text-center">尚無體脂率紀錄</p>
+        <p className="text-text-subtle text-sm py-12 text-center">尚無體脂率紀錄</p>
       </div>
     )
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm p-5">
+    <div className="bg-surface rounded-2xl shadow-sm p-5">
       <div className="flex items-center justify-between mb-1 flex-wrap gap-2">
         <h3 className="font-semibold">體脂率變化</h3>
         {healthyRange ? (
           <TargetStatusBadge label="體脂率上限" current={latestBodyFat} target={healthyRange[1]} unit="%" />
         ) : (
-          <span className="text-xs text-gray-400 bg-gray-50 rounded-full px-3 py-1">設定性別後可顯示健康範圍</span>
+          <span className="text-xs text-text-subtle bg-background rounded-full px-3 py-1">設定性別後可顯示健康範圍</span>
         )}
       </div>
-      <p className="text-xs text-gray-400 mb-4">體重停滯但體脂下降時，代表身體組成正在改善</p>
+      <p className="text-xs text-text-subtle mb-4">體重停滯但體脂下降時，代表身體組成正在改善</p>
       <ResponsiveContainer width="100%" height={260}>
         <LineChart data={chartData} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />

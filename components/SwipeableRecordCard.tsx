@@ -91,7 +91,7 @@ export default function SwipeableRecordCard({ children, onEdit, onDelete, isDele
       }}
     >
       <div
-        className="absolute inset-y-0 right-0 flex items-center justify-center bg-red-500 rounded-r-[18px]"
+        className="absolute inset-y-0 right-0 flex items-center justify-center bg-danger rounded-r-[18px]"
         style={{ width: REVEAL_WIDTH }}
       >
         <button
@@ -132,7 +132,7 @@ export default function SwipeableRecordCard({ children, onEdit, onDelete, isDele
           transition: isDragging ? 'none' : 'transform 0.2s ease-out',
           touchAction: 'pan-y',
         }}
-        className="relative bg-white select-none flex items-center"
+        className="relative bg-surface select-none flex items-center"
       >
         {/* 卡片內容占滿剩餘空間，min-w-0 讓內部文字/chip在窄螢幕正常換行或截斷，
             不會把右側展開按鈕擠出畫面外 */}
@@ -144,7 +144,7 @@ export default function SwipeableRecordCard({ children, onEdit, onDelete, isDele
           type="button"
           onClick={handleEditClick}
           aria-label="編輯紀錄"
-          className="shrink-0 self-stretch px-3 flex items-center justify-center text-gray-300 hover:text-gray-500 hover:bg-gray-50"
+          className="shrink-0 self-stretch px-3 flex items-center justify-center text-text-disabled hover:text-text-muted hover:bg-background"
         >
           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />

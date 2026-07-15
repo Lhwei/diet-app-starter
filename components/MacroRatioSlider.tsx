@@ -86,7 +86,7 @@ export default function MacroRatioSlider({ dietMode, value, onChange }: Props) {
             className={`text-xs rounded-full px-3 py-1 border transition ${
               ratio.protein === preset.protein && ratio.fat === preset.fat && ratio.carb === preset.carb
                 ? 'bg-black text-white border-black'
-                : 'border-gray-300 text-gray-600 hover:border-gray-400'
+                : 'border-border text-text-muted hover:border-border'
             }`}
           >
             {mode} {formatMacroRatioText(preset)}
@@ -103,7 +103,7 @@ export default function MacroRatioSlider({ dietMode, value, onChange }: Props) {
       <div className="space-y-3">
         {LABELS.map((l) => (
           <div key={l.key} className="flex items-center gap-3">
-            <span className="text-sm text-gray-600 w-20 shrink-0">{l.label}</span>
+            <span className="text-sm text-text-muted w-20 shrink-0">{l.label}</span>
             <input
               type="range"
               min={0}
@@ -118,7 +118,7 @@ export default function MacroRatioSlider({ dietMode, value, onChange }: Props) {
         ))}
       </div>
 
-      <p className="text-xs text-gray-400">
+      <p className="text-xs text-text-subtle">
         目前比例：{formatMacroRatioText(ratio)}（蛋白質/脂質/碳水），拖動任一滑桿會自動調整另外兩項，總和維持100%
       </p>
     </div>

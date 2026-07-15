@@ -42,10 +42,9 @@ const navItems = [
   },
   { key: 'add', label: '新增', href: null, icon: null },
   {
-    key: 'game',
-    label: '暫無',
-    href: null,
-    disabled: true,
+    key: 'theme',
+    label: '主題',
+    href: '/theme',
     icon: (active: boolean) => (
       <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
         <rect x="2" y="6" width="20" height="12" rx="6" />
@@ -81,7 +80,7 @@ export default function MobileBottomNav() {
 
   return (
     <>
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-gray-200 pb-[env(safe-area-inset-bottom)]">
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-surface border-t border-border-light pb-[env(safe-area-inset-bottom)]">
         <div className="flex items-stretch justify-between px-1">
           {navItems.map((item) => {
             if (item.key === 'add') {
@@ -92,13 +91,13 @@ export default function MobileBottomNav() {
                   className="flex-1 flex flex-col items-center justify-center py-2"
                   aria-label="新增紀錄"
                 >
-                  <span className="w-9 h-9 -mt-4 rounded-full bg-gray-900 text-white flex items-center justify-center shadow-md">
+                  <span className="w-9 h-9 -mt-4 rounded-full bg-invert-bg text-white flex items-center justify-center shadow-md">
                     <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
                       <line x1="12" y1="5" x2="12" y2="19" />
                       <line x1="5" y1="12" x2="19" y2="12" />
                     </svg>
                   </span>
-                  <span className="text-[11px] text-gray-500 mt-1">{item.label}</span>
+                  <span className="text-[11px] text-text-muted mt-1">{item.label}</span>
                 </button>
               )
             }
@@ -109,7 +108,7 @@ export default function MobileBottomNav() {
               return (
                 <div
                   key={item.key}
-                  className="flex-1 flex flex-col items-center justify-center py-2.5 text-gray-300"
+                  className="flex-1 flex flex-col items-center justify-center py-2.5 text-text-disabled"
                   aria-disabled="true"
                 >
                   {item.icon!(false)}
@@ -122,7 +121,7 @@ export default function MobileBottomNav() {
               <button
                 key={item.key}
                 onClick={() => router.push(item.href!)}
-                className={`flex-1 flex flex-col items-center justify-center py-2.5 ${active ? 'text-gray-900' : 'text-gray-400'}`}
+                className={`flex-1 flex flex-col items-center justify-center py-2.5 ${active ? 'text-text-strong' : 'text-text-subtle'}`}
               >
                 {item.icon!(active)}
                 <span className="text-[11px] mt-1">{item.label}</span>

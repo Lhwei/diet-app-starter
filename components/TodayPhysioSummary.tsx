@@ -73,13 +73,13 @@ export default function TodayPhysioSummary() {
   return (
     <div className="space-y-3">
       {!hasAnySummary ? (
-        <p className="text-sm text-gray-400">今天還沒有生理紀錄</p>
+        <p className="text-sm text-text-subtle">今天還沒有生理紀錄</p>
       ) : (
         <div className="space-y-2">
           {measurementRecords.map((r: any) => {
             const bloodPressure = formatBloodPressure(r)
             return (
-              <div key={r.id} className="flex flex-wrap gap-4 text-sm bg-gray-50 rounded-xl px-4 py-3">
+              <div key={r.id} className="flex flex-wrap gap-4 text-sm bg-background rounded-xl px-4 py-3">
                 {r.weight != null && <span>體重 <strong>{r.weight}kg</strong></span>}
                 {r.bloodSugar != null && <span>血糖 <strong>{r.bloodSugar}mg/dL</strong></span>}
                 {bloodPressure && <span>血壓 <strong>{bloodPressure}</strong></span>}
@@ -88,7 +88,7 @@ export default function TodayPhysioSummary() {
           })}
 
           {(totalWater > 0 || peeCount > 0 || poopCount > 0) && (
-            <div className="flex flex-wrap gap-4 text-sm bg-gray-50 rounded-xl px-4 py-3">
+            <div className="flex flex-wrap gap-4 text-sm bg-background rounded-xl px-4 py-3">
               {totalWater > 0 && <span>飲水 <strong>{totalWater}ml</strong></span>}
               {peeCount > 0 && <span>尿尿 <strong>{peeCount}次</strong></span>}
               {poopCount > 0 && <span>大便 <strong>{poopCount}次</strong></span>}
@@ -99,7 +99,7 @@ export default function TodayPhysioSummary() {
 
       <Link
         href="/physio"
-        className="inline-block text-sm text-blue-600 hover:underline"
+        className="inline-block text-sm text-accent hover:underline"
       >
         查看完整生理紀錄 →
       </Link>

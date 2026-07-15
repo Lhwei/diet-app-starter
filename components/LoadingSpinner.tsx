@@ -28,13 +28,13 @@ export default function LoadingSpinner({
   return (
     <div className="flex flex-col items-center justify-center gap-3 py-8">
       <div className={`relative ${sizeClass}`}>
-        <div className="absolute inset-0 rounded-full border-4 border-pink-100" />
+        <div className="absolute inset-0 rounded-full border-4 border-danger-soft" />
         <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-pink-400 border-r-pink-400 animate-spin" />
         <div className="absolute inset-0 flex items-center justify-center">
           {emoji}
         </div>
       </div>
-      {label && <p className="text-sm text-gray-400 animate-pulse">{label}</p>}
+      {label && <p className="text-sm text-text-subtle animate-pulse">{label}</p>}
     </div>
   )
 }

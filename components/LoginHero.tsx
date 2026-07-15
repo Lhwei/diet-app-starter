@@ -31,7 +31,7 @@ export default function LoginHero() {
       <div className="absolute top-1/2 left-1/3 w-40 h-40 bg-[#E8846B] rounded-full opacity-20 blur-2xl" />
 
       <div className="relative max-w-5xl mx-auto px-5 sm:px-8 pt-10 sm:pt-20 pb-10 flex flex-col items-center text-center min-h-[92vh] sm:min-h-screen justify-center">
-        <div className="inline-flex items-center gap-2 bg-white border-2 border-[#3A3A3A]/10 rounded-full px-4 py-2 mb-6 shadow-[2px_2px_0_0_rgba(58,58,58,0.08)]">
+        <div className="inline-flex items-center gap-2 bg-surface border-2 border-[#3A3A3A]/10 rounded-full px-4 py-2 mb-6 shadow-[2px_2px_0_0_rgba(58,58,58,0.08)]">
           <span className="text-sm">🍳</span>
           <span className="text-xs font-medium text-[#7A6A5A]">免費使用，資料帶著走</span>
         </div>
@@ -66,7 +66,7 @@ export default function LoginHero() {
         </div>
 
         <div className="relative w-64 h-64 sm:w-80 sm:h-80">
-          <div className="absolute inset-0 bg-white rounded-[38%_62%_58%_42%/48%_42%_58%_52%] border-[3px] border-[#3A3A3A]/10 rotate-3 scale-95 shadow-[6px_6px_0_0_rgba(58,58,58,0.06)]" />
+          <div className="absolute inset-0 bg-surface rounded-[38%_62%_58%_42%/48%_42%_58%_52%] border-[3px] border-[#3A3A3A]/10 rotate-3 scale-95 shadow-[6px_6px_0_0_rgba(58,58,58,0.06)]" />
           <div className="absolute inset-0 flex items-center justify-center p-6 animate-[float_4s_ease-in-out_infinite]">
             {illustrationSrc ? (
               <Image
@@ -77,7 +77,7 @@ export default function LoginHero() {
                 priority
               />
             ) : (
-              <div className="w-full h-full rounded-3xl bg-white/60 animate-pulse" />
+              <div className="w-full h-full rounded-3xl bg-surface/60 animate-pulse" />
             )}
           </div>
         </div>

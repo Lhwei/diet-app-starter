@@ -39,16 +39,16 @@ function parseMacroRatio(ratioText: string | undefined): { protein: number; fat:
 
 function getStatusColor(consumed: number, target: number): { barColor: string; textColor: string; label: string } {
   if (!target || target <= 0) {
-    return { barColor: 'bg-gray-300', textColor: 'text-gray-400', label: '—' }
+    return { barColor: 'bg-surface-muted', textColor: 'text-text-subtle', label: '—' }
   }
   const ratio = consumed / target
   if (ratio > 1 + TOLERANCE) {
-    return { barColor: 'bg-red-500', textColor: 'text-red-600', label: '超標' }
+    return { barColor: 'bg-danger', textColor: 'text-danger', label: '超標' }
   }
   if (ratio < 1 - TOLERANCE) {
-    return { barColor: 'bg-amber-400', textColor: 'text-amber-600', label: '未達標' }
+    return { barColor: 'bg-warning', textColor: 'text-warning', label: '未達標' }
   }
-  return { barColor: 'bg-green-500', textColor: 'text-green-600', label: '達標' }
+  return { barColor: 'bg-success', textColor: 'text-success', label: '達標' }
 }
 
 // 飲水量目標是「範圍」而不是單一數字，所以顏色規則跟 getStatusColor() 不同：
@@ -57,8 +57,8 @@ function getStatusColor(consumed: number, target: number): { barColor: string; t
 function getWaterStatus(consumedMl: number, weightKg: number | null) {
   if (!weightKg || weightKg <= 0) {
     return {
-      barColor: 'bg-gray-300',
-      textColor: 'text-gray-400',
+      barColor: 'bg-surface-muted',
+      textColor: 'text-text-subtle',
       label: '—',
       targetMin: null as number | null,
       targetMax: null as number | null,
@@ -69,12 +69,12 @@ function getWaterStatus(consumedMl: number, weightKg: number | null) {
   const targetMax = weightKg * WATER_ML_PER_KG_MAX
 
   if (consumedMl > targetMax) {
-    return { barColor: 'bg-red-500', textColor: 'text-red-600', label: '超標', targetMin, targetMax }
+    return { barColor: 'bg-danger', textColor: 'text-danger', label: '超標', targetMin, targetMax }
   }
   if (consumedMl < targetMin) {
-    return { barColor: 'bg-amber-400', textColor: 'text-amber-600', label: '未達標', targetMin, targetMax }
+    return { barColor: 'bg-warning', textColor: 'text-warning', label: '未達標', targetMin, targetMax }
   }
-  return { barColor: 'bg-green-500', textColor: 'text-green-600', label: '達標', targetMin, targetMax }
+  return { barColor: 'bg-success', textColor: 'text-success', label: '達標', targetMin, targetMax }
 }
 
 function MetricBar({ label, unit, consumed, target }: { label: string; unit: string; consumed: number; target: number }) {
@@ -84,14 +84,14 @@ function MetricBar({ label, unit, consumed, target }: { label: string; unit: str
   return (
     <div className="space-y-1">
       <div className="flex items-baseline justify-between">
-        <span className="text-xs text-gray-600">{label}</span>
+        <span className="text-xs text-text-muted">{label}</span>
         <span className={`text-xs font-medium ${textColor}`}>{statusLabel}</span>
       </div>
       <div className="flex items-baseline gap-1">
         <span className="text-lg font-bold">{Math.round(consumed)}</span>
-        <span className="text-xs text-gray-400">/ {target > 0 ? Math.round(target) : '—'} {unit}</span>
+        <span className="text-xs text-text-subtle">/ {target > 0 ? Math.round(target) : '—'} {unit}</span>
       </div>
-      <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+      <div className="w-full h-2 bg-surface-muted rounded-full overflow-hidden">
         <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${percent}%` }} />
       </div>
     </div>
@@ -127,7 +127,7 @@ function WaterMetric({
   return (
     <div className="space-y-1">
       <div className="flex items-baseline justify-between">
-        <span className="text-xs text-gray-600">飲水量</span>
+        <span className="text-xs text-text-muted">飲水量</span>
         <span className={`text-xs font-medium ${textColor}`}>
           {isLoading ? '讀取中' : label}
         </span>
@@ -136,9 +136,9 @@ function WaterMetric({
         <span className="text-lg font-bold">
           {isLoading || waterIntakeMl === null ? '—' : Math.round(waterIntakeMl)}
         </span>
-        <span className="text-xs text-gray-400">/ {targetText}</span>
+        <span className="text-xs text-text-subtle">/ {targetText}</span>
       </div>
-      <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+      <div className="w-full h-2 bg-surface-muted rounded-full overflow-hidden">
         <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${percent}%` }} />
       </div>
     </div>
@@ -174,15 +174,15 @@ export default function DailyNutritionSummary({
 
   if (!calorieTarget) {
     return (
-      <div className="bg-white rounded-2xl shadow-sm p-5 text-xs text-gray-400">
+      <div className="bg-surface rounded-2xl shadow-sm p-5 text-xs text-text-subtle">
         尚未設定每日熱量目標，請先到「個人資料」填寫，才能顯示當日飲食摘要。
       </div>
     )
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm px-5 py-2 md:py-5">
-      <h3 className="text-xs font-semibold text-gray-500 mb-2">當日飲食摘要</h3>
+    <div className="bg-surface rounded-2xl shadow-sm px-5 py-2 md:py-5">
+      <h3 className="text-xs font-semibold text-text-muted mb-2">當日飲食摘要</h3>
 
       <div className="space-y-2 md:space-y-4">
         {/* 第一排：熱量 + 飲水量，兩個「總量型」指標 */}

@@ -34,12 +34,12 @@ function SectionHeader({
       className={`w-full flex items-start justify-between gap-3 text-left ${collapsible ? '' : 'cursor-default'}`}
     >
       <div>
-        <h2 className="text-base font-bold text-gray-900">{title}</h2>
-        <p className="text-xs text-gray-400 mt-0.5">{subtitle}</p>
+        <h2 className="text-base font-bold text-text-strong">{title}</h2>
+        <p className="text-xs text-text-subtle mt-0.5">{subtitle}</p>
       </div>
       {collapsible && (
         <svg
-          className={`w-4 h-4 mt-1 text-gray-400 shrink-0 transition-transform ${expanded ? 'rotate-180' : ''}`}
+          className={`w-4 h-4 mt-1 text-text-subtle shrink-0 transition-transform ${expanded ? 'rotate-180' : ''}`}
           viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
         >
           <polyline points="6 9 12 15 18 9" />
@@ -55,9 +55,9 @@ export default function DashboardContent() {
 
   return (
     <div className="pb-4">
-      <div className="sticky top-0 z-10 bg-gray-50/95 backdrop-blur-sm -mx-4 px-4 py-3 sm:-mx-0 sm:px-0 sm:static sm:bg-transparent border-b border-gray-100 sm:border-0 mb-2">
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm -mx-4 px-4 py-3 sm:-mx-0 sm:px-0 sm:static sm:bg-transparent border-b border-border-subtle sm:border-0 mb-2">
         <div className="flex items-center justify-between gap-3">
-          <p className="text-xs text-gray-400 shrink-0 hidden">時間範圍</p>
+          <p className="text-xs text-text-subtle shrink-0 hidden">時間範圍</p>
           <TimeRangeTabs value={days} onChange={setDays} />
         </div>
       </div>
@@ -71,7 +71,7 @@ export default function DashboardContent() {
           <WeightProjectionCard />
         </section>
 
-        <section className="bg-white rounded-2xl shadow-sm p-4 sm:p-5 space-y-4">
+        <section className="bg-surface rounded-2xl shadow-sm p-4 sm:p-5 space-y-4">
           <SectionHeader
             title="每日總覽"
             subtitle="熱量、營養素比例、飲水與六大類飲食達成狀況"
@@ -80,7 +80,7 @@ export default function DashboardContent() {
           <WaterToiletChart days={days} />
         </section>
 
-        <section className="bg-white rounded-2xl shadow-sm p-4 sm:p-5 space-y-4">
+        <section className="bg-surface rounded-2xl shadow-sm p-4 sm:p-5 space-y-4">
           <SectionHeader
             title="趨勢分析"
             subtitle="體重、體脂、血壓等長期變化"

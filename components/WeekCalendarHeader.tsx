@@ -46,18 +46,18 @@ export default function WeekCalendarHeader({ selectedDate, onSelectDate }: WeekC
       <div className="relative flex items-center justify-center">
         <button
           onClick={() => setShowYearMonthPicker((v) => !v)}
-          className="text-sm font-semibold text-gray-700 flex items-center gap-1 hover:text-black"
+          className="text-sm font-semibold text-text-body flex items-center gap-1 hover:text-black"
         >
           {formatYearMonth(weekStart)}
-          <span className="text-xs text-gray-400">▾</span>
+          <span className="text-xs text-text-subtle">▾</span>
         </button>
 
         {showYearMonthPicker && (
-          <div className="absolute top-8 z-10 bg-white rounded-xl shadow-lg border border-gray-100 p-3 flex gap-2">
+          <div className="absolute top-8 z-10 bg-surface rounded-xl shadow-lg border border-border-subtle p-3 flex gap-2">
             <select
               value={currentYear}
               onChange={(e) => handleYearMonthChange(Number(e.target.value), currentMonth)}
-              className="rounded-lg border border-gray-300 px-2 py-1 text-sm"
+              className="rounded-lg border border-border px-2 py-1 text-sm"
             >
               {yearOptions.map((y) => (
                 <option key={y} value={y}>{y}年</option>
@@ -66,7 +66,7 @@ export default function WeekCalendarHeader({ selectedDate, onSelectDate }: WeekC
             <select
               value={currentMonth}
               onChange={(e) => handleYearMonthChange(currentYear, Number(e.target.value))}
-              className="rounded-lg border border-gray-300 px-2 py-1 text-sm"
+              className="rounded-lg border border-border px-2 py-1 text-sm"
             >
               {Array.from({ length: 12 }, (_, m) => (
                 <option key={m} value={m}>{m + 1}月</option>
@@ -79,7 +79,7 @@ export default function WeekCalendarHeader({ selectedDate, onSelectDate }: WeekC
       <div className="flex items-center gap-1">
         <button
           onClick={goToPreviousWeek}
-          className="shrink-0 w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100"
+          className="shrink-0 w-8 h-8 flex items-center justify-center rounded-full text-text-subtle hover:bg-surface-muted"
           aria-label="上一週"
         >
           ‹
@@ -97,8 +97,8 @@ export default function WeekCalendarHeader({ selectedDate, onSelectDate }: WeekC
                   selected
                     ? 'bg-black text-white'
                     : isToday
-                    ? 'bg-gray-100 text-black'
-                    : 'text-gray-600 hover:bg-gray-50'
+                    ? 'bg-surface-muted text-black'
+                    : 'text-text-muted hover:bg-background'
                 }`}
               >
                 <span className="text-[10px] opacity-70">{WEEKDAY_LABELS[i]}</span>
@@ -110,7 +110,7 @@ export default function WeekCalendarHeader({ selectedDate, onSelectDate }: WeekC
 
         <button
           onClick={goToNextWeek}
-          className="shrink-0 w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100"
+          className="shrink-0 w-8 h-8 flex items-center justify-center rounded-full text-text-subtle hover:bg-surface-muted"
           aria-label="下一週"
         >
           ›

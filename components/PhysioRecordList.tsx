@@ -40,29 +40,29 @@ function toDateKeyFromIso(recordDate: string): string | undefined {
 function PrimaryValue({ record }: { record: any }) {
   if (record.weight != null) {
     return (
-      <span className="text-base font-bold text-gray-900">
-        {record.weight}<span className="text-xs font-normal text-gray-400 ml-0.5">kg</span>
+      <span className="text-base font-bold text-text-strong">
+        {record.weight}<span className="text-xs font-normal text-text-subtle ml-0.5">kg</span>
       </span>
     )
   }
   if (record.waterIntake != null) {
     return (
-      <span className="text-base font-bold text-sky-600">
-        {record.waterIntake}<span className="text-xs font-normal text-sky-400 ml-0.5">ml</span>
+      <span className="text-base font-bold text-info">
+        {record.waterIntake}<span className="text-xs font-normal text-info ml-0.5">ml</span>
       </span>
     )
   }
   if (record.toiletType === '尿尿') {
     return (
-      <span className="text-base font-bold text-blue-600">
-        1<span className="text-xs font-normal text-blue-400 ml-0.5">尿尿</span>
+      <span className="text-base font-bold text-accent">
+        1<span className="text-xs font-normal text-info ml-0.5">尿尿</span>
       </span>
     )
   }
   if (record.toiletType === '大便') {
     return (
-      <span className="text-base font-bold text-amber-700">
-        1<span className="text-xs font-normal text-amber-500 ml-0.5">大便</span>
+      <span className="text-base font-bold text-warning-hover">
+        1<span className="text-xs font-normal text-warning ml-0.5">大便</span>
       </span>
     )
   }
@@ -133,13 +133,13 @@ export default function PhysioRecordList() {
 
   if (error === 'notion_not_ready') {
     return (
-      <div className="bg-yellow-50 text-yellow-700 rounded-xl p-4 text-sm">
+      <div className="bg-warning-soft text-warning-hover rounded-xl p-4 text-sm">
         Notion 尚未完成連結或初始化，請先到「設定」頁面完成 Notion 連結。
       </div>
     )
   }
 
-  if (error) return <p className="text-red-600">讀取失敗：{error}</p>
+  if (error) return <p className="text-danger">讀取失敗：{error}</p>
 
   if (editingRecord) {
     return (
@@ -161,7 +161,7 @@ export default function PhysioRecordList() {
     <div className="space-y-4">
 
       {records.length === 0 && (
-        <p className="text-gray-400">還沒有任何紀錄，點上面按鈕新增第一筆吧！</p>
+        <p className="text-text-subtle">還沒有任何紀錄，點上面按鈕新增第一筆吧！</p>
       )}
 
       <div className="space-y-3">
@@ -176,11 +176,11 @@ export default function PhysioRecordList() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   {record.timeSlot && (
-                    <span className="inline-flex items-center rounded-full bg-gray-900 text-white text-xs font-medium px-2.5 py-1">
+                    <span className="inline-flex items-center rounded-full bg-invert-bg text-white text-xs font-medium px-2.5 py-1">
                       {record.timeSlot}
                     </span>
                   )}
-                  <span className="text-xs text-gray-400">{formatRecordDateDisplay(record.recordDate)}</span>
+                  <span className="text-xs text-text-subtle">{formatRecordDateDisplay(record.recordDate)}</span>
                 </div>
                 <PrimaryValue record={record} />
               </div>
@@ -188,17 +188,17 @@ export default function PhysioRecordList() {
               {(record.bodyFat != null || record.systolic != null || record.bloodSugar != null) && (
                 <div className="flex flex-wrap gap-2 pt-0.5">
                   {record.bodyFat != null && (
-                    <span className="text-xs rounded-md px-2 py-1 font-medium bg-gray-50 text-gray-600">
+                    <span className="text-xs rounded-md px-2 py-1 font-medium bg-background text-text-muted">
                       體脂 {record.bodyFat}%
                     </span>
                   )}
                   {record.systolic != null && (
-                    <span className="text-xs rounded-md px-2 py-1 font-medium bg-gray-50 text-gray-600">
+                    <span className="text-xs rounded-md px-2 py-1 font-medium bg-background text-text-muted">
                       血壓 {record.systolic}/{record.diastolic ?? '-'}
                     </span>
                   )}
                   {record.bloodSugar != null && (
-                    <span className="text-xs rounded-md px-2 py-1 font-medium bg-gray-50 text-gray-600">
+                    <span className="text-xs rounded-md px-2 py-1 font-medium bg-background text-text-muted">
                       血糖 {record.bloodSugar}
                     </span>
                   )}
@@ -213,7 +213,7 @@ export default function PhysioRecordList() {
         <button
           onClick={loadMore}
           disabled={isLoadingMore}
-          className="w-full rounded-xl border border-gray-300 px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+          className="w-full rounded-xl border border-border px-5 py-2.5 text-sm font-medium text-text-body hover:bg-background disabled:opacity-50"
         >
           {isLoadingMore ? '載入中...' : '載入更多'}
         </button>

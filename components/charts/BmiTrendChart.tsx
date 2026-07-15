@@ -9,10 +9,10 @@ interface Props {
 }
 
 const ZONE_LABELS: Record<string, { text: string; color: string }> = {
-  underweight: { text: '過輕', color: 'bg-yellow-50 text-yellow-600' },
-  normal: { text: '正常', color: 'bg-green-50 text-green-600' },
-  overweight: { text: '過重', color: 'bg-orange-50 text-orange-600' },
-  obese: { text: '肥胖', color: 'bg-red-50 text-red-600' },
+  underweight: { text: '過輕', color: 'bg-warning-soft text-warning' },
+  normal: { text: '正常', color: 'bg-success-soft text-success' },
+  overweight: { text: '過重', color: 'bg-warning-soft text-warning' },
+  obese: { text: '肥胖', color: 'bg-danger-soft text-danger' },
 }
 
 export default function BmiTrendChart({ data, hasHeight }: Props) {
@@ -22,9 +22,9 @@ export default function BmiTrendChart({ data, hasHeight }: Props) {
 
   if (!hasHeight) {
     return (
-      <div className="bg-white rounded-2xl shadow-sm p-5">
+      <div className="bg-surface rounded-2xl shadow-sm p-5">
         <h3 className="font-semibold mb-4">BMI變化</h3>
-        <p className="text-yellow-600 text-sm py-12 text-center">
+        <p className="text-warning text-sm py-12 text-center">
           個人資料尚未填寫身高，無法計算BMI，請先到「設定」補上身高資料
         </p>
       </div>
@@ -33,9 +33,9 @@ export default function BmiTrendChart({ data, hasHeight }: Props) {
 
   if (chartData.length === 0) {
     return (
-      <div className="bg-white rounded-2xl shadow-sm p-5">
+      <div className="bg-surface rounded-2xl shadow-sm p-5">
         <h3 className="font-semibold mb-4">BMI變化</h3>
-        <p className="text-gray-400 text-sm py-12 text-center">尚無體重紀錄可計算BMI</p>
+        <p className="text-text-subtle text-sm py-12 text-center">尚無體重紀錄可計算BMI</p>
       </div>
     )
   }
@@ -43,7 +43,7 @@ export default function BmiTrendChart({ data, hasHeight }: Props) {
   const maxBmi = Math.max(...chartData.map((d) => d.bmi!), 28)
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm p-5">
+    <div className="bg-surface rounded-2xl shadow-sm p-5">
       <div className="flex items-center justify-between mb-1 flex-wrap gap-2">
         <h3 className="font-semibold">BMI變化</h3>
         {zone && (
@@ -52,7 +52,7 @@ export default function BmiTrendChart({ data, hasHeight }: Props) {
           </span>
         )}
       </div>
-      <p className="text-xs text-gray-400 mb-4">背景色：黃=過輕 綠=正常 橘=過重 紅=肥胖</p>
+      <p className="text-xs text-text-subtle mb-4">背景色：黃=過輕 綠=正常 橘=過重 紅=肥胖</p>
       <ResponsiveContainer width="100%" height={260}>
         <LineChart data={chartData} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />

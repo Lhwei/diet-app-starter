@@ -82,7 +82,7 @@ export default function DietDashboard({ days }: Props) {
 
   if (error?.message === 'notion_not_ready') {
     return (
-      <div className="bg-yellow-50 text-yellow-700 rounded-xl p-4 text-sm">
+      <div className="bg-warning-soft text-warning-hover rounded-xl p-4 text-sm">
         Notion 尚未完成連結或初始化，請先到「設定」頁面完成 Notion 連結。
       </div>
     )
@@ -90,7 +90,7 @@ export default function DietDashboard({ days }: Props) {
 
   if (error) {
     return (
-      <p className="text-red-600">
+      <p className="text-danger">
         讀取失敗：{error.message}
       </p>
     )
@@ -102,7 +102,7 @@ export default function DietDashboard({ days }: Props) {
 
   if (records.length === 0) {
     return (
-      <p className="text-gray-400">
+      <p className="text-text-subtle">
         還沒有飲食紀錄，先到「飲食紀錄」頁面新增幾筆吧！
       </p>
     )
@@ -138,7 +138,7 @@ export default function DietDashboard({ days }: Props) {
       {hasExtraIntake ? (
         <ExtraIntakeTrendChart data={dayBuckets} />
       ) : (
-        <div className="bg-gray-50 rounded-xl px-4 py-3 text-xs text-gray-400">
+        <div className="bg-background rounded-xl px-4 py-3 text-xs text-text-subtle">
           這段時間沒有糖／酒精／咖啡因攝取紀錄，圖表已自動收合
         </div>
       )}

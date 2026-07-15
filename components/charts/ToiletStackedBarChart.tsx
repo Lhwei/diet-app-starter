@@ -21,10 +21,10 @@ export default function ToiletStackedBarChart({ data }: Props) {
   const totalPoop = data.reduce((a, b) => a + b.poopCount, 0)
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm p-5">
+    <div className="bg-surface rounded-2xl shadow-sm p-5">
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
         <h3 className="font-semibold">每日如廁次數</h3>
-        <div className="flex items-center gap-3 text-xs text-gray-500">
+        <div className="flex items-center gap-3 text-xs text-text-muted">
           <span>尿尿 共{totalPee}次</span>
           <span>大便 共{totalPoop}次</span>
         </div>

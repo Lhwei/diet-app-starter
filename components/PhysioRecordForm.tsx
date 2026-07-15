@@ -15,7 +15,7 @@
 // 體位、心血管、血糖代謝、生活習慣、還有可展開的健檢類數值），使用者
 // 填寫過程中不需要滑到最底才能點儲存/取消。
 //
-// ⚠️ 原本整個表單是一張卡片（bg-white rounded-2xl shadow-sm p-6 包住
+// ⚠️ 原本整個表單是一張卡片（bg-surface rounded-2xl shadow-sm p-6 包住
 // 整個 <form>），這次把卡片樣式收進「表單主體」內層 div，按鈕區塊獨立
 // 成固定底部區塊，兩者都仍在同一個 <form> 標籤內（提交按鈕 type="submit"
 // 需要在 <form> 內才能正確觸發 handleSubmit)。
@@ -78,7 +78,7 @@ function SingleChipSelect({
 }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">{label}</label>
+      <label className="block text-sm font-medium text-text-body mb-2">{label}</label>
       <div className="flex flex-wrap gap-2">
         {options.map((opt) => {
           const active = value === opt
@@ -89,8 +89,8 @@ function SingleChipSelect({
               onClick={() => onChange(opt)}
               className={`text-sm rounded-full px-4 py-1.5 border transition-colors ${
                 active
-                  ? 'bg-gray-900 text-white border-gray-900'
-                  : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400'
+                  ? 'bg-invert-bg text-white border-invert-bg'
+                  : 'bg-surface text-text-muted border-border hover:border-border'
               }`}
             >
               {opt}
@@ -119,7 +119,7 @@ function MultiChipSelect({
   }
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">{label}</label>
+      <label className="block text-sm font-medium text-text-body mb-2">{label}</label>
       <div className="flex flex-wrap gap-2">
         {options.map((opt) => {
           const active = value.includes(opt)
@@ -130,8 +130,8 @@ function MultiChipSelect({
               onClick={() => toggle(opt)}
               className={`text-sm rounded-full px-4 py-1.5 border transition-colors ${
                 active
-                  ? 'bg-gray-900 text-white border-gray-900'
-                  : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400'
+                  ? 'bg-invert-bg text-white border-invert-bg'
+                  : 'bg-surface text-text-muted border-border hover:border-border'
               }`}
             >
               {opt}
@@ -154,13 +154,13 @@ function NumberField({
 }) {
   return (
     <div>
-      <label className="block text-xs text-gray-500 mb-1.5">{label}</label>
+      <label className="block text-xs text-text-muted mb-1.5">{label}</label>
       <input
         type="number"
         step="any"
         value={value ?? ''}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full text-sm rounded-lg border border-gray-300 px-3 py-2"
+        className="w-full text-sm rounded-lg border border-border px-3 py-2"
       />
     </div>
   )
@@ -273,20 +273,20 @@ export default function PhysioRecordForm({ initialValues, recordId, onSuccess, o
 
   return (
     <form onSubmit={handleSubmit} className="relative">
-      {/* 表單主體：原本的卡片樣式（bg-white rounded-2xl shadow-sm p-6）
+      {/* 表單主體：原本的卡片樣式（bg-surface rounded-2xl shadow-sm p-6）
           收進這裡，底部補 padding 讓出固定按鈕區的空間 */}
-      <div className="space-y-7 bg-white rounded-2xl shadow-sm p-6 pb-[6rem] md:pb-[8rem]">
-        {error && <div className="bg-red-50 text-red-600 text-sm rounded-lg px-4 py-2">{error}</div>}
+      <div className="space-y-7 bg-surface rounded-2xl shadow-sm p-6 pb-[6rem] md:pb-[8rem]">
+        {error && <div className="bg-danger text-danger text-sm rounded-lg px-4 py-2">{error}</div>}
 
         <section className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">記錄日期時間</label>
+          <label className="block text-sm font-medium text-text-body">記錄日期時間</label>
           <input
             type="datetime-local"
             value={recordDateTime}
             onChange={(e) => setRecordDateTime(e.target.value)}
-            className="w-full sm:w-auto text-sm rounded-lg border border-gray-300 px-3 py-2"
+            className="w-full sm:w-auto text-sm rounded-lg border border-border px-3 py-2"
           />
-          <p className="text-xs text-gray-400">預設為目前時間，若要補登之前健檢報告的數值，可以手動改成報告上的日期</p>
+          <p className="text-xs text-text-subtle">預設為目前時間，若要補登之前健檢報告的數值，可以手動改成報告上的日期</p>
         </section>
 
         {timeSlotField && (
@@ -298,7 +298,7 @@ export default function PhysioRecordForm({ initialValues, recordId, onSuccess, o
               onTimeSlotTouched={() => setTimeSlotTouched(true)}
             />
             {!isEditing && !timeSlotTouched && (
-              <p className="text-xs text-gray-400">
+              <p className="text-xs text-text-subtle">
                 已依目前時間自動選擇「{values[timeSlotField.key]}」，可點選其他選項手動調整（餐前/餐後請依實際用餐時間手動選擇）
               </p>
             )}
@@ -310,7 +310,7 @@ export default function PhysioRecordForm({ initialValues, recordId, onSuccess, o
           if (fields.length === 0) return null
           return (
             <section key={group} className="space-y-3">
-              <h3 className="text-sm font-semibold text-gray-900">{group}</h3>
+              <h3 className="text-sm font-semibold text-text-strong">{group}</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {fields.map((field) => (
                   <div key={field.key} className={field.type !== 'number' ? 'sm:col-span-2' : ''}>
@@ -327,11 +327,11 @@ export default function PhysioRecordForm({ initialValues, recordId, onSuccess, o
         })}
 
         {secondaryGroups.length > 0 && (
-          <section className="pt-2 border-t border-gray-100">
+          <section className="pt-2 border-t border-border-subtle">
             <button
               type="button"
               onClick={() => setShowAdvanced((v) => !v)}
-              className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-600"
+              className="flex items-center gap-1.5 text-sm text-text-subtle hover:text-text-muted"
             >
               <svg
                 className={`w-3.5 h-3.5 transition-transform ${showAdvanced ? 'rotate-90' : ''}`}
@@ -349,7 +349,7 @@ export default function PhysioRecordForm({ initialValues, recordId, onSuccess, o
                   if (fields.length === 0) return null
                   return (
                     <div key={group} className="space-y-3">
-                      <h4 className="text-xs font-medium text-gray-400">{group}</h4>
+                      <h4 className="text-xs font-medium text-text-subtle">{group}</h4>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {fields.map((field) => (
                           <div key={field.key} className={field.type !== 'number' ? 'sm:col-span-2' : ''}>
@@ -374,19 +374,19 @@ export default function PhysioRecordForm({ initialValues, recordId, onSuccess, o
           與 DietRecordForm.tsx 的固定底部按鈕採用相同模式與數值。
           z-30 手機版桌面版都保留，避免 fixed 元素在缺少明確 z-index 時
           被頁面上其他有設定 z-index 的元素（Modal、Toast等）意外蓋住。 */}
-      <div className="fixed bottom-14 inset-x-0 z-30 bg-white border-t border-gray-100 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] md:bottom-0 md:bg-gray-50 md:pt-4 md:pb-10">
+      <div className="fixed bottom-14 inset-x-0 z-30 bg-surface border-t border-border-subtle px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] md:bottom-0 md:bg-background md:pt-4 md:pb-10">
         <div className="flex gap-3 md:max-w-2xl md:mx-auto">
           <button
             type="button"
             onClick={onCancel}
-            className="flex-1 text-sm rounded-lg px-4 py-2.5 border border-gray-300 text-gray-600 hover:bg-gray-50 bg-white"
+            className="flex-1 text-sm rounded-lg px-4 py-2.5 border border-border text-text-muted hover:bg-background bg-surface"
           >
             取消
           </button>
           <button
             type="submit"
             disabled={submitting}
-            className="flex-1 text-sm rounded-lg px-4 py-2.5 bg-gray-900 text-white hover:bg-gray-800 disabled:opacity-50"
+            className="flex-1 text-sm rounded-lg px-4 py-2.5 bg-invert-bg text-white hover:bg-invert-bg disabled:opacity-50"
           >
             {submitting ? '儲存中...' : isEditing ? '更新紀錄' : '新增紀錄'}
           </button>

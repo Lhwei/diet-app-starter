@@ -40,17 +40,17 @@ export default async function SettingsPage() {
       {/* 狀態層：Notion 連結狀態，App能不能正常運作的前提，用色塊區分正常/異常一目瞭然 */}
       <section>
         {isConnected ? (
-          <div className="rounded-2xl p-4 space-y-2.5 bg-green-50 border border-green-100">
+          <div className="rounded-2xl p-4 space-y-2.5 bg-success-soft border border-success-soft">
             <div className="flex items-center gap-2">
-              <span className="text-green-600 text-lg">✅</span>
-              <p className="text-sm font-medium text-green-700">
+              <span className="text-success text-lg">✅</span>
+              <p className="text-sm font-medium text-success-hover">
                 已連結 Notion 工作區：{connection?.workspace_name ?? '未知'}
               </p>
             </div>
 
             {!isInitCompleted ? (
               <div className="pt-1 space-y-2">
-                <p className="text-xs text-green-600">初始化狀態：{connection?.init_step}</p>
+                <p className="text-xs text-success">初始化狀態：{connection?.init_step}</p>
                 <form action="/api/notion/init" method="POST">
                   <button
                     type="submit"
@@ -59,21 +59,21 @@ export default async function SettingsPage() {
                     建立 Notion 資料結構
                   </button>
                 </form>
-                <p className="text-xs text-green-600/80">
+                <p className="text-xs text-success/80">
                   會自動建立「個人資料」「AI用PROMPT」「生理紀錄」「飲食紀錄」4 個物件
                 </p>
               </div>
             ) : (
-              <p className="text-xs text-green-600">🎉 資料結構已建立完成，可以開始使用飲食紀錄功能了</p>
+              <p className="text-xs text-success">🎉 資料結構已建立完成，可以開始使用飲食紀錄功能了</p>
             )}
           </div>
         ) : (
-          <div className="rounded-2xl p-4 space-y-3 bg-amber-50 border border-amber-100">
+          <div className="rounded-2xl p-4 space-y-3 bg-warning-soft border border-warning-soft">
             <div className="flex items-center gap-2">
-              <span className="text-amber-600 text-lg">⚠️</span>
-              <p className="text-sm font-medium text-amber-700">尚未連結 Notion</p>
+              <span className="text-warning text-lg">⚠️</span>
+              <p className="text-sm font-medium text-warning-hover">尚未連結 Notion</p>
             </div>
-            <p className="text-xs text-amber-600/90">
+            <p className="text-xs text-warning/90">
               授權後會自動建立「個人資料」「AI用PROMPT」頁面與「生理紀錄」「飲食紀錄」資料庫
             </p>
             <a
@@ -88,19 +88,19 @@ export default async function SettingsPage() {
 
       {/* 資料層：今日生理紀錄摘要、個人資料關鍵指標，手機上常態查看的內容 */}
       <section className="space-y-3">
-        <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide px-1">健康資料</h2>
-        <div className="bg-white rounded-2xl shadow-sm divide-y divide-gray-100">
+        <h2 className="text-xs font-semibold text-text-subtle uppercase tracking-wide px-1">健康資料</h2>
+        <div className="bg-surface rounded-2xl shadow-sm divide-y divide-gray-100">
           <div className="p-4 space-y-3">
             <div>
-              <h3 className="text-sm font-semibold text-gray-900">生理紀錄</h3>
-              <p className="text-xs text-gray-400 mt-0.5">今天的量測摘要，完整歷史請至生理紀錄頁查看</p>
+              <h3 className="text-sm font-semibold text-text-strong">生理紀錄</h3>
+              <p className="text-xs text-text-subtle mt-0.5">今天的量測摘要，完整歷史請至生理紀錄頁查看</p>
             </div>
             <TodayPhysioSummary />
           </div>
           <div className="p-4 space-y-3">
             <div>
-              <h3 className="text-sm font-semibold text-gray-900">個人資料</h3>
-              <p className="text-xs text-gray-400 mt-0.5">BMR / TDEE / BMI / 每日飲水目標</p>
+              <h3 className="text-sm font-semibold text-text-strong">個人資料</h3>
+              <p className="text-xs text-text-subtle mt-0.5">BMR / TDEE / BMI / 每日飲水目標</p>
             </div>
             <ProfileMetricsSummary />
           </div>
@@ -109,25 +109,25 @@ export default async function SettingsPage() {
 
       {/* 帳號與法遵層：低頻操作，用手機常見的list row樣式合併呈現，減少滑動距離 */}
       <section className="space-y-3">
-        <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide px-1">帳號</h2>
-        <div className="bg-white rounded-2xl shadow-sm divide-y divide-gray-100 overflow-hidden">
+        <h2 className="text-xs font-semibold text-text-subtle uppercase tracking-wide px-1">帳號</h2>
+        <div className="bg-surface rounded-2xl shadow-sm divide-y divide-gray-100 overflow-hidden">
           <Link
             href="/privacy-policy"
-            className="flex items-center justify-between px-4 py-3.5 text-sm text-gray-700 hover:bg-gray-50 transition"
+            className="flex items-center justify-between px-4 py-3.5 text-sm text-text-body hover:bg-background transition"
           >
             隱私權政策
-            <span className="text-gray-300">›</span>
+            <span className="text-text-disabled">›</span>
           </Link>
           <Link
             href="/terms-of-service"
-            className="flex items-center justify-between px-4 py-3.5 text-sm text-gray-700 hover:bg-gray-50 transition"
+            className="flex items-center justify-between px-4 py-3.5 text-sm text-text-body hover:bg-background transition"
           >
             服務條款
-            <span className="text-gray-300">›</span>
+            <span className="text-text-disabled">›</span>
           </Link>
           <div className="flex items-center justify-between px-4 py-3.5">
             <div>
-              <p className="text-sm text-gray-700">登出帳號</p>
+              <p className="text-sm text-text-body">登出帳號</p>
             </div>
             <LogoutButton />
           </div>

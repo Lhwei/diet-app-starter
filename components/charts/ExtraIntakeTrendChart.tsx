@@ -16,10 +16,10 @@ const SERIES = [
 
 export default function ExtraIntakeTrendChart({ data }: Props) {
   return (
-    <div className="bg-white rounded-2xl shadow-sm p-4 sm:p-5 space-y-5">
+    <div className="bg-surface rounded-2xl shadow-sm p-4 sm:p-5 space-y-5">
       <div>
         <h3 className="font-semibold">糖／酒精 攝取趨勢</h3>
-        <p className="text-xs text-gray-400 mt-0.5">觀察是否有異常增加的攝取模式</p>
+        <p className="text-xs text-text-subtle mt-0.5">觀察是否有異常增加的攝取模式</p>
       </div>
 
       {SERIES.map((series) => {
@@ -31,15 +31,15 @@ export default function ExtraIntakeTrendChart({ data }: Props) {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: series.color }} />
-                <span className="text-sm font-medium text-gray-700">{series.label}</span>
+                <span className="text-sm font-medium text-text-body">{series.label}</span>
               </div>
-              <span className="text-xs text-gray-400">
+              <span className="text-xs text-text-subtle">
                 區間累計 {Math.round(total * 10) / 10} {series.unit}
               </span>
             </div>
 
             {total === 0 ? (
-              <p className="text-xs text-gray-300 py-4 text-center">這段時間沒有{series.label}攝取紀錄</p>
+              <p className="text-xs text-text-disabled py-4 text-center">這段時間沒有{series.label}攝取紀錄</p>
             ) : (
               <ResponsiveContainer width="100%" height={140}>
                 <LineChart data={chartData} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>

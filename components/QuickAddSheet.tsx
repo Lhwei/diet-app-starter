@@ -83,74 +83,74 @@ export default function QuickAddSheet({ onClose, onChoose }: QuickAddSheetProps)
     <div className="fixed inset-0 z-50 flex items-end sm:items-center sm:justify-center">
       <div className="absolute inset-0 bg-black/40" onClick={isBusy ? undefined : onClose} />
 
-      <div className="relative w-full sm:w-80 bg-white rounded-t-2xl sm:rounded-2xl p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] sm:pb-4 space-y-2">
+      <div className="relative w-full sm:w-80 bg-surface rounded-t-2xl sm:rounded-2xl p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] sm:pb-4 space-y-2">
         {logState.status === 'success' && (
-          <div className="absolute inset-x-4 -top-14 rounded-xl bg-gray-900 text-white text-sm text-center py-2.5 shadow-lg">
+          <div className="absolute inset-x-4 -top-14 rounded-xl bg-invert-bg text-white text-sm text-center py-2.5 shadow-lg">
             已記錄{logState.label}
           </div>
         )}
         {logState.status === 'error' && (
-          <div className="absolute inset-x-4 -top-14 rounded-xl bg-red-500 text-white text-sm text-center py-2.5 shadow-lg">
+          <div className="absolute inset-x-4 -top-14 rounded-xl bg-danger text-white text-sm text-center py-2.5 shadow-lg">
             記錄失敗，請再試一次
           </div>
         )}
 
-        <p className="text-sm font-medium text-gray-500 px-2 pt-1 pb-1">完整紀錄</p>
+        <p className="text-sm font-medium text-text-muted px-2 pt-1 pb-1">完整紀錄</p>
 
         <button
           onClick={() => onChoose('diet')}
           disabled={isBusy}
-          className="w-full flex items-center gap-3 rounded-xl border border-gray-200 px-4 py-3.5 hover:bg-gray-50 disabled:opacity-50"
+          className="w-full flex items-center gap-3 rounded-xl border border-border-light px-4 py-3.5 hover:bg-background disabled:opacity-50"
         >
-          <span className="w-9 h-9 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center">
+          <span className="w-9 h-9 rounded-full bg-warning-soft text-warning flex items-center justify-center">
             <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
               <path d="M18 8h1a4 4 0 010 8h-1" />
               <path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z" />
             </svg>
           </span>
-          <span className="text-sm font-medium text-gray-900">飲食紀錄</span>
+          <span className="text-sm font-medium text-text-strong">飲食紀錄</span>
         </button>
 
         <button
           onClick={() => onChoose('physio')}
           disabled={isBusy}
-          className="w-full flex items-center gap-3 rounded-xl border border-gray-200 px-4 py-3.5 hover:bg-gray-50 disabled:opacity-50"
+          className="w-full flex items-center gap-3 rounded-xl border border-border-light px-4 py-3.5 hover:bg-background disabled:opacity-50"
         >
-          <span className="w-9 h-9 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center">
+          <span className="w-9 h-9 rounded-full bg-danger-soft text-danger flex items-center justify-center">
             <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
               <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
             </svg>
           </span>
-          <span className="text-sm font-medium text-gray-900">生理紀錄</span>
+          <span className="text-sm font-medium text-text-strong">生理紀錄</span>
         </button>
 
         <div className="flex items-center gap-2 px-2 pt-3 pb-1">
-          <span className="h-px flex-1 bg-gray-100" />
-          <span className="text-xs text-gray-400">快捷記錄</span>
-          <span className="h-px flex-1 bg-gray-100" />
+          <span className="h-px flex-1 bg-surface-muted" />
+          <span className="text-xs text-text-subtle">快捷記錄</span>
+          <span className="h-px flex-1 bg-surface-muted" />
         </div>
 
-        <div className="rounded-xl border border-gray-200 px-4 py-3.5 space-y-2.5">
+        <div className="rounded-xl border border-border-light px-4 py-3.5 space-y-2.5">
           <div className="flex items-center gap-3">
-            <span className="w-9 h-9 rounded-full bg-sky-50 text-sky-600 flex items-center justify-center shrink-0">
+            <span className="w-9 h-9 rounded-full bg-info-soft text-info flex items-center justify-center shrink-0">
               <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 2.69s6 6.6 6 10.81a6 6 0 11-12 0c0-4.21 6-10.81 6-10.81z" />
               </svg>
             </span>
-            <span className="text-sm font-medium text-gray-900">飲水</span>
+            <span className="text-sm font-medium text-text-strong">飲水</span>
           </div>
           <div className="flex gap-2">
             <button
               onClick={() => handleQuickLog('飲水250ml', { waterIntake: 250 })}
               disabled={isBusy}
-              className="flex-1 text-sm rounded-lg border border-sky-200 text-sky-600 py-2 hover:bg-sky-50 disabled:opacity-50"
+              className="flex-1 text-sm rounded-lg border border-info-soft text-info py-2 hover:bg-info-soft disabled:opacity-50"
             >
               250ml
             </button>
             <button
               onClick={() => handleQuickLog('飲水500ml', { waterIntake: 500 })}
               disabled={isBusy}
-              className="flex-1 text-sm rounded-lg border border-sky-200 text-sky-600 py-2 hover:bg-sky-50 disabled:opacity-50"
+              className="flex-1 text-sm rounded-lg border border-info-soft text-info py-2 hover:bg-info-soft disabled:opacity-50"
             >
               500ml
             </button>
@@ -166,12 +166,12 @@ export default function QuickAddSheet({ onClose, onChoose }: QuickAddSheetProps)
                   if (e.key === 'Enter') handleCustomSubmit()
                 }}
                 disabled={isBusy}
-                className="w-full text-sm text-center rounded-lg border border-gray-200 py-2 px-1 disabled:opacity-50"
+                className="w-full text-sm text-center rounded-lg border border-border-light py-2 px-1 disabled:opacity-50"
               />
               <button
                 onClick={handleCustomSubmit}
                 disabled={isBusy || !customMl}
-                className="shrink-0 w-8 h-8 rounded-lg bg-sky-500 text-white flex items-center justify-center disabled:opacity-30"
+                className="shrink-0 w-8 h-8 rounded-lg bg-info text-white flex items-center justify-center disabled:opacity-30"
                 aria-label="送出自訂飲水量"
               >
                 <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
@@ -187,34 +187,34 @@ export default function QuickAddSheet({ onClose, onChoose }: QuickAddSheetProps)
           <button
             onClick={() => handleQuickLog('一次尿尿', { toiletType: '尿尿' })}
             disabled={isBusy}
-            className="flex items-center gap-3 rounded-xl border border-gray-200 px-4 py-3.5 hover:bg-gray-50 disabled:opacity-50"
+            className="flex items-center gap-3 rounded-xl border border-border-light px-4 py-3.5 hover:bg-background disabled:opacity-50"
           >
-            <span className="w-9 h-9 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+            <span className="w-9 h-9 rounded-full bg-accent-soft text-accent flex items-center justify-center shrink-0">
               <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 2.69s6 6.6 6 10.81a6 6 0 11-12 0c0-4.21 6-10.81 6-10.81z" />
               </svg>
             </span>
-            <span className="text-sm font-medium text-gray-900">尿尿</span>
+            <span className="text-sm font-medium text-text-strong">尿尿</span>
           </button>
 
           <button
             onClick={() => handleQuickLog('一次大便', { toiletType: '大便' })}
             disabled={isBusy}
-            className="flex items-center gap-3 rounded-xl border border-gray-200 px-4 py-3.5 hover:bg-gray-50 disabled:opacity-50"
+            className="flex items-center gap-3 rounded-xl border border-border-light px-4 py-3.5 hover:bg-background disabled:opacity-50"
           >
-            <span className="w-9 h-9 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
+            <span className="w-9 h-9 rounded-full bg-amber-100 text-warning-hover flex items-center justify-center shrink-0">
               <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="9" />
               </svg>
             </span>
-            <span className="text-sm font-medium text-gray-900">大便</span>
+            <span className="text-sm font-medium text-text-strong">大便</span>
           </button>
         </div>
 
         <button
           onClick={onClose}
           disabled={isBusy}
-          className="w-full text-center text-sm text-gray-400 py-2.5 disabled:opacity-50"
+          className="w-full text-center text-sm text-text-subtle py-2.5 disabled:opacity-50"
         >
           取消
         </button>

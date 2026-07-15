@@ -20,7 +20,7 @@ export default function LogoutButton() {
     <button
       onClick={handleLogout}
       disabled={isLoggingOut}
-      className="rounded-xl border border-gray-300 px-5 py-2.5 font-medium text-gray-700 hover:bg-gray-50 transition disabled:opacity-50"
+      className="rounded-xl border border-border px-5 py-2.5 font-medium text-text-body hover:bg-background transition disabled:opacity-50"
     >
       {isLoggingOut ? '登出中...' : '登出帳號'}
     </button>

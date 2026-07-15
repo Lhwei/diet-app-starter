@@ -56,16 +56,16 @@ export default function MacroDonutChart({ protein, fat, carb, alcoholCalories = 
   })
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm p-5">
+    <div className="bg-surface rounded-2xl shadow-sm p-5">
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-semibold">今日三大營養素比例</h3>
         {targetRatioText && (
-          <span className="text-xs text-gray-500 bg-gray-100 rounded-full px-3 py-1">目標比例 {targetRatioText}</span>
+          <span className="text-xs text-text-muted bg-surface-muted rounded-full px-3 py-1">目標比例 {targetRatioText}</span>
         )}
       </div>
 
       {!hasData ? (
-        <p className="text-sm text-gray-400 py-8 text-center">今天還沒有飲食紀錄</p>
+        <p className="text-sm text-text-subtle py-8 text-center">今天還沒有飲食紀錄</p>
       ) : (
         <div className="flex items-center justify-center gap-6 flex-wrap">
           <div className="relative shrink-0" style={{ width: RADIUS * 2 + STROKE_WIDTH, height: RADIUS * 2 + STROKE_WIDTH }}>
@@ -120,10 +120,10 @@ export default function MacroDonutChart({ protein, fat, carb, alcoholCalories = 
 
           <div className="flex flex-col gap-2">
             {arcs.map((arc) => (
-              <div key={arc.key} className="flex items-center gap-2 text-sm text-gray-600">
+              <div key={arc.key} className="flex items-center gap-2 text-sm text-text-muted">
                 <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: arc.color }} />
                 <span>{arc.label}</span>
-                <span className="text-gray-400 text-xs">{arc.percent}%</span>
+                <span className="text-text-subtle text-xs">{arc.percent}%</span>
               </div>
             ))}
           </div>
@@ -131,7 +131,7 @@ export default function MacroDonutChart({ protein, fat, carb, alcoholCalories = 
       )}
 
       {alcoholKcal > 0 && (
-        <p className="text-xs text-gray-400 mt-3">
+        <p className="text-xs text-text-subtle mt-3">
           酒精熱量已計入總熱量與此比例圖，但不計入蛋白質/脂質/碳水的目標比例基準
         </p>
       )}

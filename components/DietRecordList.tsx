@@ -189,7 +189,7 @@ export default function DietRecordList() {
       {/* sticky 容器：週曆 + 當日摘要一起常駐頂部，內部維持一般排列，
           間距用 gap-2 (0.5rem) 取代原本較寬的 space-y-5，讓整塊常駐區域
           在直向空間有限的手機畫面上盡量精簡，把可視高度留給下方列表 */}
-      <div className="sticky md:static top-0 z-20 bg-gray-50 py-2 -mx-4 px-4 space-y-2 md:space-y-4">
+      <div className="sticky md:static top-0 z-20 bg-background py-2 -mx-4 px-4 space-y-2 md:space-y-4">
         <WeekCalendarHeader
           selectedDate={selectedDate}
           onSelectDate={setSelectedDate}
@@ -210,11 +210,11 @@ export default function DietRecordList() {
         {isInitialLoading ? (
           <LoadingSpinner />
         ) : error?.message === 'notion_not_ready' ? (
-          <div className="bg-yellow-50 text-yellow-700 rounded-xl p-4 text-sm">
+          <div className="bg-warning-soft text-warning-hover rounded-xl p-4 text-sm">
             Notion 尚未完成連結或初始化，請先到「設定」頁面完成 Notion 連結。
           </div>
         ) : error ? (
-          <p className="text-red-600">
+          <p className="text-danger">
             讀取失敗：{error.message}
           </p>
         ) : editingRecord ? (
@@ -233,7 +233,7 @@ export default function DietRecordList() {
         ) : (
           <div className="space-y-4">
             {safeRecords.length === 0 && (
-              <p className="text-gray-400">
+              <p className="text-text-subtle">
                 這天還沒有任何紀錄，點上面按鈕新增第一筆吧！
               </p>
             )}
@@ -250,20 +250,20 @@ export default function DietRecordList() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         {record.mealType && (
-                          <span className="inline-flex items-center rounded-full bg-gray-900 text-white text-xs font-medium px-2.5 py-1">
+                          <span className="inline-flex items-center rounded-full bg-invert-bg text-white text-xs font-medium px-2.5 py-1">
                             {record.mealType}
                           </span>
                         )}
 
-                        <span className="text-xs text-gray-400">
+                        <span className="text-xs text-text-subtle">
                           {formatLocalTime(record.recordDate)}
                         </span>
                       </div>
 
                       {record.calories != null && (
-                        <span className="text-base font-bold text-gray-900">
+                        <span className="text-base font-bold text-text-strong">
                           {record.calories}
-                          <span className="text-xs font-normal text-gray-400 ml-0.5">
+                          <span className="text-xs font-normal text-text-subtle ml-0.5">
                             kcal
                           </span>
                         </span>
@@ -271,7 +271,7 @@ export default function DietRecordList() {
                     </div>
 
                     {record.foodContent && (
-                      <p className="text-sm text-gray-800 leading-relaxed">
+                      <p className="text-sm text-text-body leading-relaxed">
                         {record.foodContent}
                       </p>
                     )}
@@ -284,10 +284,10 @@ export default function DietRecordList() {
                           <span
                             className={`text-xs rounded-md px-2 py-1 font-medium ${
                               Number(record.protein) < 20
-                                ? 'bg-amber-50 text-amber-700'
+                                ? 'bg-warning-soft text-warning-hover'
                                 : Number(record.protein) > 40
-                                  ? 'bg-red-50 text-red-700'
-                                  : 'bg-gray-50 text-gray-600'
+                                  ? 'bg-danger-soft text-danger-hover'
+                                  : 'bg-background text-text-muted'
                             }`}
                           >
                             蛋白質 {record.protein}g
@@ -295,13 +295,13 @@ export default function DietRecordList() {
                         )}
 
                         {record.fat != null && (
-                          <span className="text-xs rounded-md px-2 py-1 font-medium bg-gray-50 text-gray-600">
+                          <span className="text-xs rounded-md px-2 py-1 font-medium bg-background text-text-muted">
                             脂質 {record.fat}g
                           </span>
                         )}
 
                         {record.carb != null && (
-                          <span className="text-xs rounded-md px-2 py-1 font-medium bg-gray-50 text-gray-600">
+                          <span className="text-xs rounded-md px-2 py-1 font-medium bg-background text-text-muted">
                             碳水 {record.carb}g
                           </span>
                         )}

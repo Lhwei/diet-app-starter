@@ -13,19 +13,19 @@ export default function CalorieGauge({ consumed, target }: Props) {
   const barColor = percent > 110 ? '#ef4444' : percent > 90 ? '#f59e0b' : '#10b981'
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm p-5">
+    <div className="bg-surface rounded-2xl shadow-sm p-5">
       <h3 className="font-semibold mb-4">本日熱量缺口</h3>
       <div className="flex items-end justify-between mb-2">
         <span className="text-3xl font-bold">{Math.round(consumed)}</span>
-        <span className="text-sm text-gray-400">/ {target} kcal</span>
+        <span className="text-sm text-text-subtle">/ {target} kcal</span>
       </div>
-      <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
+      <div className="w-full h-3 bg-surface-muted rounded-full overflow-hidden">
         <div
           className="h-full rounded-full transition-all"
           style={{ width: `${Math.min(percent, 100)}%`, backgroundColor: barColor }}
         />
       </div>
-      <p className={`text-sm mt-3 ${isOver ? 'text-red-500' : 'text-gray-500'}`}>
+      <p className={`text-sm mt-3 ${isOver ? 'text-danger' : 'text-text-muted'}`}>
         {isOver ? `已超標 ${Math.abs(Math.round(remaining))} kcal` : `剩餘額度 ${Math.round(remaining)} kcal`}
       </p>
     </div>

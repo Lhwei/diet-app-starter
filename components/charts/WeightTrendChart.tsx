@@ -15,20 +15,20 @@ export default function WeightTrendChart({ data, targetWeight }: Props) {
 
   if (chartData.length === 0) {
     return (
-      <div className="bg-white rounded-2xl shadow-sm p-5">
+      <div className="bg-surface rounded-2xl shadow-sm p-5">
         <h3 className="font-semibold mb-4">體重變化</h3>
-        <p className="text-gray-400 text-sm py-12 text-center">尚無體重紀錄</p>
+        <p className="text-text-subtle text-sm py-12 text-center">尚無體重紀錄</p>
       </div>
     )
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm p-5">
+    <div className="bg-surface rounded-2xl shadow-sm p-5">
       <div className="flex items-center justify-between mb-1 flex-wrap gap-2">
         <h3 className="font-semibold">體重變化</h3>
         <TargetStatusBadge label="體重" current={latestWeight} target={targetWeight} unit="kg" />
       </div>
-      <p className="text-xs text-gray-400 mb-4">灰線為7日移動平均，平滑每日水分波動干擾</p>
+      <p className="text-xs text-text-subtle mb-4">灰線為7日移動平均，平滑每日水分波動干擾</p>
       <ResponsiveContainer width="100%" height={260}>
         <LineChart data={chartData} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />

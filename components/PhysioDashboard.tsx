@@ -56,18 +56,18 @@ export default function PhysioDashboard({ days }: Props) {
   
   if (error?.message === 'notion_not_ready') {
     return (
-      <div className="bg-yellow-50 text-yellow-700 rounded-xl p-4 text-sm">
+      <div className="bg-warning-soft text-warning-hover rounded-xl p-4 text-sm">
         Notion 尚未完成連結或初始化，請先到「設定」頁面完成 Notion 連結。
       </div>
     )
   }
 
-  if (error) return <p className="text-red-600">讀取失敗：{error.message}</p>
+  if (error) return <p className="text-danger">讀取失敗：{error.message}</p>
 
   if (isInitialLoading || records === null) return <LoadingSpinner />
 
   if (records.length === 0) {
-    return <p className="text-gray-400">還沒有生理紀錄，先到「生理紀錄」頁面新增幾筆體重/腰圍紀錄吧！</p>
+    return <p className="text-text-subtle">還沒有生理紀錄，先到「生理紀錄」頁面新增幾筆體重/腰圍紀錄吧！</p>
   }
 
   // 身高優先用生理紀錄實際量到的數值，沒有才退回個人資料設定的身高。

@@ -85,28 +85,28 @@ export default function ProfileForm({ initialValues, onSaved }: ProfileFormProps
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {error && <div className="bg-red-50 text-red-600 text-sm rounded-lg px-4 py-2">{error}</div>}
-      {saved && <div className="bg-green-50 text-green-600 text-sm rounded-lg px-4 py-2">已儲存！</div>}
+      {error && <div className="bg-danger text-danger text-sm rounded-lg px-4 py-2">{error}</div>}
+      {saved && <div className="bg-success-soft text-success text-sm rounded-lg px-4 py-2">已儲存！</div>}
 
-      <div className="bg-blue-50 rounded-2xl p-5 flex flex-wrap gap-6 text-sm">
+      <div className="bg-accent-soft rounded-2xl p-5 flex flex-wrap gap-6 text-sm">
         <div>
-          <p className="text-gray-500">基礎代謝率 BMR</p>
+          <p className="text-text-muted">基礎代謝率 BMR</p>
           <p className="text-xl font-bold">{bmr ? `${bmr} kcal` : '—'}</p>
         </div>
         <div>
-          <p className="text-gray-500">每日總消耗 TDEE</p>
+          <p className="text-text-muted">每日總消耗 TDEE</p>
           <p className="text-xl font-bold">{tdee ? `${tdee} kcal` : '—'}</p>
         </div>
         <div>
-          <p className="text-gray-500">BMI</p>
+          <p className="text-text-muted">BMI</p>
           <p className="text-xl font-bold">{bmi ? bmi : '—'}</p>
         </div>
         <div>
-          <p className="text-gray-500">每日飲水目標</p>
+          <p className="text-text-muted">每日飲水目標</p>
           <p className="text-xl font-bold">{waterRange ? `${waterRange.suggested} ml` : '—'}</p>
-          {waterRange && <p className="text-xs text-gray-400">範圍 {waterRange.min}~{waterRange.max}ml</p>}
+          {waterRange && <p className="text-xs text-text-subtle">範圍 {waterRange.min}~{waterRange.max}ml</p>}
         </div>
-        <p className="text-xs text-gray-400 w-full mt-1">
+        <p className="text-xs text-text-subtle w-full mt-1">
           填完性別/身高/出生日期/起始體重/日常活動係數後即時計算，儲存時會一併寫入快照欄位（此四項為固定公式，無法手動編輯）
         </p>
       </div>
@@ -115,20 +115,20 @@ export default function ProfileForm({ initialValues, onSaved }: ProfileFormProps
         <div key={group}>
           {group !== '自動計算快照' && (
             <>
-              <h3 className="text-sm font-semibold text-gray-500 mb-3">{group}</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-white rounded-2xl shadow-sm p-5 mb-2">
+              <h3 className="text-sm font-semibold text-text-muted mb-3">{group}</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-surface rounded-2xl shadow-sm p-5 mb-2">
                 {profileFields.filter((f) => f.group === group).map((field) => (
                   <div
                     key={field.key}
                     className={field.type === 'multi_select' || field.key === 'macroRatioTarget' ? 'sm:col-span-2' : ''}
                   >
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-text-body mb-1">
                       {field.label}
-                      {field.required && <span className="text-red-500 ml-1">*</span>}
-                      {field.readOnly && <span className="text-gray-400 text-xs ml-1">(固定計算)</span>}
-                      {field.autoSuggested && <span className="text-blue-500 text-xs ml-1">(自動建議，可調整)</span>}
+                      {field.required && <span className="text-danger ml-1">*</span>}
+                      {field.readOnly && <span className="text-text-subtle text-xs ml-1">(固定計算)</span>}
+                      {field.autoSuggested && <span className="text-info text-xs ml-1">(自動建議，可調整)</span>}
                     </label>
-                    {field.helperText && <p className="text-xs text-gray-400 mb-1">{field.helperText}</p>}
+                    {field.helperText && <p className="text-xs text-text-subtle mb-1">{field.helperText}</p>}
 
                     {field.key === 'macroRatioTarget' ? (
                       <MacroRatioSlider
@@ -144,7 +144,7 @@ export default function ProfileForm({ initialValues, onSaved }: ProfileFormProps
                             value={values[field.key] ?? ''}
                             onChange={(e) => updateValue(field.key, e.target.value)}
                             required={field.required}
-                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                            className="w-full rounded-lg border border-border px-3 py-2 text-sm"
                           />
                         )}
 
@@ -153,7 +153,7 @@ export default function ProfileForm({ initialValues, onSaved }: ProfileFormProps
                             value={values[field.key] ?? ''}
                             onChange={(e) => updateValue(field.key, e.target.value)}
                             required={field.required}
-                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                            className="w-full rounded-lg border border-border px-3 py-2 text-sm"
                           >
                             <option value="">請選擇</option>
                             {field.options?.map((opt) => (
@@ -172,7 +172,7 @@ export default function ProfileForm({ initialValues, onSaved }: ProfileFormProps
                                   key={opt}
                                   onClick={() => toggleMultiSelect(field.key, opt)}
                                   className={`text-sm rounded-full px-3 py-1 border ${
-                                    selected ? 'bg-black text-white border-black' : 'border-gray-300 text-gray-600'
+                                    selected ? 'bg-black text-white border-black' : 'border-border text-text-muted'
                                   }`}
                                 >
                                   {opt}
@@ -194,7 +194,7 @@ export default function ProfileForm({ initialValues, onSaved }: ProfileFormProps
                             required={field.required}
                             readOnly={field.readOnly}
                             className={`w-full rounded-lg border px-3 py-2 text-sm ${
-                              field.readOnly ? 'bg-gray-50 border-gray-200 text-gray-500' : 'border-gray-300'
+                              field.readOnly ? 'bg-background border-border-light text-text-muted' : 'border-border'
                             }`}
                           />
                         )}
@@ -204,7 +204,7 @@ export default function ProfileForm({ initialValues, onSaved }: ProfileFormProps
                             value={values[field.key] ?? ''}
                             onChange={(e) => updateValue(field.key, e.target.value)}
                             rows={2}
-                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                            className="w-full rounded-lg border border-border px-3 py-2 text-sm"
                           />
                         )}
 
@@ -214,7 +214,7 @@ export default function ProfileForm({ initialValues, onSaved }: ProfileFormProps
                             value={values[field.key] ?? ''}
                             onChange={(e) => updateValue(field.key, e.target.value)}
                             required={field.required}
-                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                            className="w-full rounded-lg border border-border px-3 py-2 text-sm"
                           />
                         )}
                       </>

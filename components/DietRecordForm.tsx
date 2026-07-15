@@ -71,8 +71,8 @@ function SingleChipSelect({
 }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">
-        {label} {required && <span className="text-red-500">*</span>}
+      <label className="block text-sm font-medium text-text-body mb-2">
+        {label} {required && <span className="text-danger">*</span>}
       </label>
       <div className="flex flex-wrap gap-2">
         {options.map((opt) => {
@@ -84,8 +84,8 @@ function SingleChipSelect({
               onClick={() => onChange(opt)}
               className={`text-sm rounded-full px-4 py-1.5 border transition-colors ${
                 active
-                  ? 'bg-gray-900 text-white border-gray-900'
-                  : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400'
+                  ? 'bg-invert-bg text-white border-invert-bg'
+                  : 'bg-surface text-text-muted border-border hover:border-border'
               }`}
             >
               {opt}
@@ -114,7 +114,7 @@ function MultiChipSelect({
   }
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">{label}</label>
+      <label className="block text-sm font-medium text-text-body mb-2">{label}</label>
       <div className="flex flex-wrap gap-2">
         {options.map((opt) => {
           const active = value.includes(opt)
@@ -125,8 +125,8 @@ function MultiChipSelect({
               onClick={() => toggle(opt)}
               className={`text-sm rounded-full px-4 py-1.5 border transition-colors ${
                 active
-                  ? 'bg-gray-900 text-white border-gray-900'
-                  : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400'
+                  ? 'bg-invert-bg text-white border-invert-bg'
+                  : 'bg-surface text-text-muted border-border hover:border-border'
               }`}
             >
               {opt}
@@ -156,12 +156,12 @@ function ServingStepper({
 
   return (
     <div>
-      <label className="block text-xs text-gray-500 mb-1.5">{label}</label>
+      <label className="block text-xs text-text-muted mb-1.5">{label}</label>
       <div className="flex items-center gap-1.5">
         <button
           type="button"
           onClick={() => step(-0.5)}
-          className="w-8 h-8 shrink-0 rounded-lg border border-gray-300 text-gray-500 hover:bg-gray-50 flex items-center justify-center text-lg leading-none"
+          className="w-8 h-8 shrink-0 rounded-lg border border-border text-text-muted hover:bg-background flex items-center justify-center text-lg leading-none"
           aria-label={`${label} 減少0.5份`}
         >
           −
@@ -172,12 +172,12 @@ function ServingStepper({
           min="0"
           value={value}
           onChange={(e) => onChange(e.target.value === '' ? '' : Number(e.target.value))}
-          className="w-full text-center text-sm rounded-lg border border-gray-300 px-2 py-1.5"
+          className="w-full text-center text-sm rounded-lg border border-border px-2 py-1.5"
         />
         <button
           type="button"
           onClick={() => step(0.5)}
-          className="w-8 h-8 shrink-0 rounded-lg border border-gray-300 text-gray-500 hover:bg-gray-50 flex items-center justify-center text-lg leading-none"
+          className="w-8 h-8 shrink-0 rounded-lg border border-border text-text-muted hover:bg-background flex items-center justify-center text-lg leading-none"
           aria-label={`${label} 增加0.5份`}
         >
           +
@@ -261,17 +261,17 @@ export default function DietRecordForm({ initialValues, onSuccess, onCancel }: D
     <form onSubmit={handleSubmit} className="relative">
       {/* 表單主體：所有可滑動內容，底部預留空間給固定區塊+導航列，避免被蓋住 */}
       <div className="space-y-7 pb-[8rem] md:pb-[11rem]">
-        {error && <div className="bg-red-50 text-red-600 text-sm rounded-lg px-4 py-2">{error}</div>}
+        {error && <div className="bg-danger text-danger text-sm rounded-lg px-4 py-2">{error}</div>}
 
         <section className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">記錄日期時間</label>
+          <label className="block text-sm font-medium text-text-body">記錄日期時間</label>
           <input
             type="datetime-local"
             value={recordDateTime}
             onChange={(e) => setRecordDateTime(e.target.value)}
-            className="w-full sm:w-auto text-sm rounded-lg border border-gray-300 px-3 py-2"
+            className="w-full sm:w-auto text-sm rounded-lg border border-border px-3 py-2"
           />
-          <p className="text-xs text-gray-400">預設為目前時間，若要補登之前吃的一餐，可以手動改成實際用餐的日期時間</p>
+          <p className="text-xs text-text-subtle">預設為目前時間，若要補登之前吃的一餐，可以手動改成實際用餐的日期時間</p>
         </section>
 
         <section className="space-y-4">
@@ -286,19 +286,19 @@ export default function DietRecordForm({ initialValues, onSuccess, onCancel }: D
             required
           />
           {!isEditing && !mealTypeTouched && (
-            <p className="text-xs text-gray-400 -mt-2">已依目前時間自動選擇「{values.mealType}」，可點選其他選項手動調整</p>
+            <p className="text-xs text-text-subtle -mt-2">已依目前時間自動選擇「{values.mealType}」，可點選其他選項手動調整</p>
           )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              {fieldByKey.foodContent.label} <span className="text-red-500">*</span>
+            <label className="block text-sm font-medium text-text-body mb-2">
+              {fieldByKey.foodContent.label} <span className="text-danger">*</span>
             </label>
             <textarea
               required
               rows={3}
               value={values.foodContent ?? ''}
               onChange={(e) => updateValue('foodContent', e.target.value)}
-              className="w-full text-sm rounded-lg border border-gray-300 px-3 py-2"
+              className="w-full text-sm rounded-lg border border-border px-3 py-2"
               placeholder="例如：燕麥牛奶、蛋、香蕉、花椰菜"
             />
           </div>
@@ -306,8 +306,8 @@ export default function DietRecordForm({ initialValues, onSuccess, onCancel }: D
 
         <section className="space-y-3">
           <div>
-            <h3 className="text-sm font-semibold text-gray-900">六大類食物（份）</h3>
-            <p className="text-xs text-gray-400 mt-0.5">用按鈕以0.5份為單位調整，也可以直接點輸入框手動輸入</p>
+            <h3 className="text-sm font-semibold text-text-strong">六大類食物（份）</h3>
+            <p className="text-xs text-text-subtle mt-0.5">用按鈕以0.5份為單位調整，也可以直接點輸入框手動輸入</p>
             <PortionGuideHint />
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -324,8 +324,8 @@ export default function DietRecordForm({ initialValues, onSuccess, onCancel }: D
 
         <section className="space-y-3">
           <div>
-            <h3 className="text-sm font-semibold text-gray-900">額外攝取（選填）</h3>
-            <p className="text-xs text-gray-400 mt-0.5">糖與酒精會計入總熱量，咖啡因僅作紀錄不計熱量</p>
+            <h3 className="text-sm font-semibold text-text-strong">額外攝取（選填）</h3>
+            <p className="text-xs text-text-subtle mt-0.5">糖與酒精會計入總熱量，咖啡因僅作紀錄不計熱量</p>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -344,19 +344,19 @@ export default function DietRecordForm({ initialValues, onSuccess, onCancel }: D
               onChange={(v) => updateValue('alcoholType', v)}
             />
             <div>
-              <label className="block text-xs text-gray-500 mb-1.5">{fieldByKey.alcohol.label}（喝下去的總量，非純酒精量）</label>
+              <label className="block text-xs text-text-muted mb-1.5">{fieldByKey.alcohol.label}（喝下去的總量，非純酒精量）</label>
               <input
                 type="number"
                 min="0"
                 value={values.alcohol ?? ''}
                 onChange={(e) => updateValue('alcohol', e.target.value === '' ? '' : Number(e.target.value))}
-                className="w-full text-sm rounded-lg border border-gray-300 px-3 py-2"
+                className="w-full text-sm rounded-lg border border-border px-3 py-2"
                 placeholder="例如：一杯啤酒約350ml"
               />
             </div>
           </div>
           {computed.alcoholCalories > 0 && (
-            <p className="text-xs text-amber-600">依所選酒類自動換算，本次酒精熱量約 {computed.alcoholCalories} kcal</p>
+            <p className="text-xs text-warning">依所選酒類自動換算，本次酒精熱量約 {computed.alcoholCalories} kcal</p>
           )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -367,30 +367,30 @@ export default function DietRecordForm({ initialValues, onSuccess, onCancel }: D
               onChange={(v) => updateValue('caffeineSource', v)}
             />
             <div>
-              <label className="block text-xs text-gray-500 mb-1.5">{fieldByKey.caffeineServings.label}</label>
+              <label className="block text-xs text-text-muted mb-1.5">{fieldByKey.caffeineServings.label}</label>
               <input
                 type="number"
                 step="0.5"
                 min="0"
                 value={values.caffeineServings ?? ''}
                 onChange={(e) => updateValue('caffeineServings', e.target.value === '' ? '' : Number(e.target.value))}
-                className="w-full text-sm rounded-lg border border-gray-300 px-3 py-2"
+                className="w-full text-sm rounded-lg border border-border px-3 py-2"
               />
             </div>
           </div>
         </section>
 
         <section className="space-y-4">
-          <h3 className="text-sm font-semibold text-gray-900">補充生理數值</h3>
+          <h3 className="text-sm font-semibold text-text-strong">補充生理數值</h3>
           <div className="grid grid-cols-2 gap-4">
             {['fiber', 'sodium', 'bloodSugar'].map((key) => (
               <div key={key} className={key === 'bloodSugar' ? 'col-span-2' : ''}>
-                <label className="block text-xs text-gray-500 mb-1.5">{fieldByKey[key].label}</label>
+                <label className="block text-xs text-text-muted mb-1.5">{fieldByKey[key].label}</label>
                 <input
                   type="number"
                   value={values[key] ?? ''}
                   onChange={(e) => updateValue(key, e.target.value === '' ? '' : Number(e.target.value))}
-                  className="w-full text-sm rounded-lg border border-gray-300 px-3 py-2"
+                  className="w-full text-sm rounded-lg border border-border px-3 py-2"
                 />
               </div>
             ))}
@@ -398,7 +398,7 @@ export default function DietRecordForm({ initialValues, onSuccess, onCancel }: D
         </section>
 
         <section className="space-y-4">
-          <h3 className="text-sm font-semibold text-gray-900">身心感知</h3>
+          <h3 className="text-sm font-semibold text-text-strong">身心感知</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <SingleChipSelect
               label={fieldByKey.fullness.label}
@@ -434,7 +434,7 @@ export default function DietRecordForm({ initialValues, onSuccess, onCancel }: D
         </section>
 
         <section className="space-y-4">
-          <h3 className="text-sm font-semibold text-gray-900">情境與備註</h3>
+          <h3 className="text-sm font-semibold text-text-strong">情境與備註</h3>
           <SingleChipSelect
             label={fieldByKey.scene.label}
             options={fieldByKey.scene.options!}
@@ -442,12 +442,12 @@ export default function DietRecordForm({ initialValues, onSuccess, onCancel }: D
             onChange={(v) => updateValue('scene', v)}
           />
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">{fieldByKey.note.label}</label>
+            <label className="block text-sm font-medium text-text-body mb-2">{fieldByKey.note.label}</label>
             <textarea
               rows={3}
               value={values.note ?? ''}
               onChange={(e) => updateValue('note', e.target.value)}
-              className="w-full text-sm rounded-lg border border-gray-300 px-3 py-2"
+              className="w-full text-sm rounded-lg border border-border px-3 py-2"
             />
           </div>
         </section>
@@ -456,21 +456,21 @@ export default function DietRecordForm({ initialValues, onSuccess, onCancel }: D
       {/* 固定底部區塊：熱量摘要 + 行動按鈕，僅手機板固定（md以上還原成一般文件流）。
           bottom-16 假設 MobileBottomNav 為標準 h-16 且 fixed bottom-0，
           若實際高度不同，需要調整這個數值。 */}
-      <div className="fixed bottom-14 inset-x-0 z-30 bg-white border-t border-gray-100 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] space-y-3 md:bottom-0 md:bg-gray-50 md:pt-4 md:pb-10">
+      <div className="fixed bottom-14 inset-x-0 z-30 bg-surface border-t border-border-subtle px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] space-y-3 md:bottom-0 md:bg-background md:pt-4 md:pb-10">
         <div className="md:max-w-2xl md:mx-auto space-y-3">
-          <section className="rounded-xl bg-gray-50 px-4 py-3.5">
+          <section className="rounded-xl bg-background px-4 py-3.5">
             <div className="flex items-center justify-between gap-3">
               <div className="flex gap-2 flex-wrap">
-                <span className="text-xs rounded-md px-2 py-1 font-medium bg-white text-gray-600 border border-gray-200">蛋白質 {computed.protein}g</span>
-                <span className="text-xs rounded-md px-2 py-1 font-medium bg-white text-gray-600 border border-gray-200">脂質 {computed.fat}g</span>
-                <span className="text-xs rounded-md px-2 py-1 font-medium bg-white text-gray-600 border border-gray-200">碳水 {computed.carb}g</span>
+                <span className="text-xs rounded-md px-2 py-1 font-medium bg-surface text-text-muted border border-border-light">蛋白質 {computed.protein}g</span>
+                <span className="text-xs rounded-md px-2 py-1 font-medium bg-surface text-text-muted border border-border-light">脂質 {computed.fat}g</span>
+                <span className="text-xs rounded-md px-2 py-1 font-medium bg-surface text-text-muted border border-border-light">碳水 {computed.carb}g</span>
                 {computed.alcoholCalories > 0 && (
-                  <span className="text-xs rounded-md px-2 py-1 font-medium bg-white text-amber-600 border border-amber-200">酒精 {computed.alcoholCalories}kcal</span>
+                  <span className="text-xs rounded-md px-2 py-1 font-medium bg-surface text-warning border border-warning-soft">酒精 {computed.alcoholCalories}kcal</span>
                 )}
               </div>
 
-              <span className="shrink-0 text-lg font-bold text-gray-900">
-                {computed.calories}<span className="text-xs font-normal text-gray-400 ml-1">kcal</span>
+              <span className="shrink-0 text-lg font-bold text-text-strong">
+                {computed.calories}<span className="text-xs font-normal text-text-subtle ml-1">kcal</span>
               </span>
             </div>
           </section>
@@ -479,14 +479,14 @@ export default function DietRecordForm({ initialValues, onSuccess, onCancel }: D
             <button
               type="button"
               onClick={onCancel}
-              className="flex-1 text-sm rounded-lg px-4 py-2.5 border border-gray-300 text-gray-600 hover:bg-gray-50"
+              className="flex-1 text-sm rounded-lg px-4 py-2.5 border border-border text-text-muted hover:bg-background"
             >
               取消
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="flex-1 text-sm rounded-lg px-4 py-2.5 bg-gray-900 text-white hover:bg-gray-800 disabled:opacity-50"
+              className="flex-1 text-sm rounded-lg px-4 py-2.5 bg-invert-bg text-white hover:bg-invert-bg disabled:opacity-50"
             >
               {submitting ? '儲存中...' : isEditing ? '儲存變更' : '新增紀錄'}
             </button>

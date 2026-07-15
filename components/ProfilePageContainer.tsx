@@ -20,13 +20,13 @@ export default function ProfilePageContainer() {
 
   if (error?.message === 'notion_not_ready') {
     return (
-      <div className="bg-yellow-50 text-yellow-700 rounded-xl p-4 text-sm">
+      <div className="bg-warning-soft text-warning-hover rounded-xl p-4 text-sm">
         Notion 尚未完成連結或初始化，請先到「設定」頁面完成 Notion 連結。
       </div>
     )
   }
 
-  if (error) return <p className="text-red-600">讀取失敗：{error.message}</p>
+  if (error) return <p className="text-danger">讀取失敗：{error.message}</p>
 
   // isLoading && profile === null：SWR 尚無可用資料，首次載入中。
   // 若已有快取（即使正在背景重新驗證），profile 不會是 null，不會卡在

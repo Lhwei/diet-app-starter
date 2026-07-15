@@ -23,7 +23,7 @@ export default function LoginPage() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="sm:col-span-2 sm:row-span-2 bg-white border-2 border-[#3A3A3A]/10 rounded-[2rem] p-8 flex flex-col justify-between min-h-[260px] shadow-[6px_6px_0_0_rgba(58,58,58,0.08)]">
+          <div className="sm:col-span-2 sm:row-span-2 bg-surface border-2 border-[#3A3A3A]/10 rounded-[2rem] p-8 flex flex-col justify-between min-h-[260px] shadow-[6px_6px_0_0_rgba(58,58,58,0.08)]">
             <div>
               <div className="text-4xl mb-4">⚡</div>
               <h3 className="text-xl sm:text-2xl font-bold mb-2 text-[#3A3A3A]">10秒內記完一餐</h3>
@@ -56,7 +56,7 @@ export default function LoginPage() {
             <p className="text-xs text-[#7A6A5A] leading-relaxed">缺什麼補什麼，不用靠記憶硬記今天記錄過哪些項目</p>
           </div>
 
-          <div className="sm:col-span-3 bg-white border-2 border-[#3A3A3A]/10 rounded-[2rem] p-6 sm:p-8 flex flex-col sm:flex-row  gap-5 shadow-[4px_4px_0_0_rgba(58,58,58,0.06)]">
+          <div className="sm:col-span-3 bg-surface border-2 border-[#3A3A3A]/10 rounded-[2rem] p-6 sm:p-8 flex flex-col sm:flex-row  gap-5 shadow-[4px_4px_0_0_rgba(58,58,58,0.06)]">
             <div className="text-4xl shrink-0">💡</div>
             <div>
               <h3 className="text-sm font-bold text-[#3A3A3A] mb-1">把堅持變得有意義</h3>

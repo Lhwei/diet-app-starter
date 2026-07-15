@@ -13,7 +13,7 @@ interface Props {
 export default function TargetStatusBadge({ label, current, target, unit = '', higherIsBetter = false }: Props) {
   if (target === null || current === null) {
     return (
-      <span className="text-xs text-gray-400 bg-gray-50 rounded-full px-3 py-1">
+      <span className="text-xs text-text-subtle bg-background rounded-full px-3 py-1">
         {label}：尚未設定目標
       </span>
     )
@@ -26,7 +26,7 @@ export default function TargetStatusBadge({ label, current, target, unit = '', h
   return (
     <span
       className={`text-xs rounded-full px-3 py-1 font-medium ${
-        isGood ? 'bg-green-50 text-green-600' : 'bg-orange-50 text-orange-600'
+        isGood ? 'bg-success-soft text-success' : 'bg-warning-soft text-warning'
       }`}
     >
       {label} 目標{target}{unit} · 現況{current}{unit} ({diffText})

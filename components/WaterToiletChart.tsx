@@ -41,7 +41,7 @@ export default function WaterToiletChart({ days }: Props) {
   )
 
   if (error?.message === 'notion_not_ready') return null
-  if (error) return <p className="text-red-600 text-sm">生理資料讀取失敗：{error.message}</p>
+  if (error) return <p className="text-danger text-sm">生理資料讀取失敗：{error.message}</p>
   if (isLoading && records === null) return <LoadingSpinner />
   if (records === null) return null
 

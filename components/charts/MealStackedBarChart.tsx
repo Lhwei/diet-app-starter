@@ -20,7 +20,7 @@ export default function MealStackedBarChart({ data }: Props) {
   const mealTypes = Object.keys(MEAL_COLORS)
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm p-5">
+    <div className="bg-surface rounded-2xl shadow-sm p-5">
       <h3 className="font-semibold mb-4">餐別熱量分佈</h3>
       <ResponsiveContainer width="100%" height={280}>
         <BarChart data={chartData} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
