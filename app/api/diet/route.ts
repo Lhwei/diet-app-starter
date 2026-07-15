@@ -125,7 +125,7 @@ export async function GET(request: Request) {
 
         while (hasMore && pageCount < 10) {
           const queryBody: Record<string, any> = {
-            sorts: [{ property: '記錄時間', direction: 'descending' }],
+            sorts: [{ property: '記錄日期', direction: 'descending' }],
             page_size: 100,
           }
           if (cursor) queryBody.start_cursor = cursor
