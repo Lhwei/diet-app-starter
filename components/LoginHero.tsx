@@ -21,7 +21,7 @@ export default function LoginHero() {
 
   useEffect(() => {
     const index = Math.floor(Math.random() * ILLUSTRATION_COUNT) + 1
-    setIllustrationSrc(`/images/${index}.png`)
+    setIllustrationSrc(`/images/landingpage/${index}.png`)
   }, [])
 
   return (
