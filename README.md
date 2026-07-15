@@ -153,3 +153,110 @@ npm run lint     # 執行 ESLint 檢查
   方便切換不同 Google 帳號
 - 全站已透過 `viewport` 設定與 CSS `touch-action: manipulation` 避免手機上
   連續點擊按鈕時誤觸放大縮放
+
+# 新增主題操作
+
+說明如何在飲食管理小幫手（diet-tracker-webapp）裡新增一個介面主題（例如「春天」「夏天」或其他心情主題）。整套流程設計成**只需要編輯一支程式碼檔案**（`lib/theme/themes.ts`），其他地方會自動跟著變。
+
+---
+
+## 開始前你需要知道的事
+
+主題系統由兩個部分組成：
+
+| 部分 | 負責什麼 | 你會不會動到 |
+|---|---|---|
+| `lib/theme/themes.ts` | 主題清單、名稱、素材路徑、**顏色定義** | ✅ 會 |
+| `public/images/theme/(主題id)/` | 該主題的圖片素材 | ✅ 會 |
+| `app/globals.css`、`app/layout.tsx`、`ThemeContext.tsx`、`api/theme/route.ts`、`settings/theme/page.tsx` | 讀取/切換/儲存主題、以及把 `themes.ts` 的顏色動態注入畫面的邏輯 | ❌ 不用動 |
+
+`app/layout.tsx`（Server Component）會在 render 時直接讀 `themes.ts` 裡的 `THEME_IDS` 跟 `generateThemeCss()`，動態產生 `<style>` 區塊跟防閃爍腳本要用的合法主題清單。這代表**顏色只有 `themes.ts` 這一份資料來源**，不會有兩邊對不齊的問題。
+
+---
+
+## Step 1：在 `themes.ts` 新增主題
+
+決定一個主題 id（英文小寫、不能有空格），例如 `spring`。**id 一旦上線後不要再改**——改了會讓已經選過這個主題的舊使用者的紀錄失效，變回預設值。
+
+打開 `lib/theme/themes.ts`，做兩件事：
+
+**1-1. 把新 id 加進 `THEME_IDS`**
+
+```ts
+export const THEME_IDS = ['minimal', 'cute', 'cool', 'spring'] as const
+//                                                     ^^^^^^^^ 新增這個
+```
+
+**1-2. 在 `THEMES` 物件裡補上完整設定，包含顏色**
+
+```ts
+export const THEMES: Record<ThemeId, ThemeConfig> = {
+  minimal: { /* ... 不動 ... */ },
+  cute: { /* ... 不動 ... */ },
+  cool: { /* ... 不動 ... */ },
+  spring: {
+    id: 'spring',
+    label: '春天',                        // 顯示在選擇頁面上的名稱
+    assetsPath: '/images/theme/spring',    // 圖片資料夾路徑，要跟 Step 2 對得起來
+    colors: {
+      textStrong: '#2d3b2e',
+      textBody: '#4a5d4c',
+      textMuted: '#7c8f7e',
+      textSubtle: '#a8bfa9',
+      textDisabled: '#d4e2d5',
+      bg: '#f3f9f0',
+      surface: '#ffffff',
+      surfaceMuted: '#e8f5e5',
+      invertBg: '#4a7c4e',
+      border: '#c8e0c9',
+      borderLight: '#e0efdf',
+      borderSubtle: '#f0f7ef',
+      accent: '#66bb6a',
+      accentHover: '#4caf50',
+      accentSoft: '#e8f5e9',
+    },
+  },
+}
+```
+
+`ThemeColors` 型別定義了 15 個固定欄位（`colors` 物件裡的 15 個 key），TypeScript 會強制檢查有沒有填齊，漏填會直接編譯錯誤，不用擔心漏東漏西。
+
+**顏色怎麼挑比較不會踩雷：**
+- `textStrong` 跟 `bg` 的對比度要夠（標題文字要看得清楚）
+- `surface` 通常維持接近白色，除非是深色主題（像 `cool`）
+- `accent` 是按鈕、連結、選中狀態的顏色，建議選一個飽和度夠、跟背景色系搭的顏色
+
+存檔後**不用改 `globals.css` 或 `layout.tsx`**——`generateThemeCss()` 會在下次 build/render 時自動把這組顏色轉成 CSS 注入畫面。
+
+---
+
+## Step 2：準備圖片素材
+
+在 `public/images/theme/` 底下新建一個跟 Step 1 id 同名的資料夾，裡面要放**四個固定檔名**的檔案（對應 `themes.ts` 裡的 `THEME_ASSET_SLOTS`）：
+
+```
+public/images/theme/spring/
+  bg-home.png          首頁背景
+  bg-dashboard.png     儀表板背景
+  icon-meal.svg        飲食紀錄圖示
+  icon-water.svg       喝水/生理紀錄圖示
+```
+
+**檔名一定要跟其他主題資料夾完全一致**（大小寫、副檔名都要一樣），程式碼是用固定路徑拼接的，檔名對不上會直接讀不到圖（畫面上會是破圖或空白，不會報錯，記得實際打開頁面肉眼確認）。
+
+如果暫時沒有某個素材，可以：
+- 先不放檔案，讓該主題那個位置暫時維持透明/純色背景，之後有素材再補
+- 或是先用 `minimal` 的圖檔頂著，之後換掉
+
+---
+
+## Step 3：測試
+
+1. `npm run dev` 啟動本機開發
+2. 打開 `/settings/theme`，確認新主題有出現在選項卡片裡
+3. 點選新主題，檢查：
+   - 整個 App 的顏色有沒有正確切換（文字、背景、邊框、按鈕）
+   - 重新整理頁面後主題有沒有保留（測試 localStorage 快取有沒有生效）
+   - 換個瀏覽器/無痕視窗登入同帳號，確認主題有沒有跨裝置同步（測試 Supabase 有沒有正確存取）
+4. 檢查有沒有破圖：切到新主題後，把每個有用到 `bg-home.png` / `icon-meal.svg` 等素材的頁面都點過一次
+5. 打開瀏覽器開發者工具，檢查 `<head>` 裡的 `<style>` 標籤有沒有出現新的 `[data-theme='spring']` 區塊（確認 `generateThemeCss()` 有正確吃到新資料）
