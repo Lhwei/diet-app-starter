@@ -150,6 +150,17 @@ export function useDietRecords<T = NotionRecord>(days: number = 30) {
 //
 // 寫入後怎麼處理：新增/編輯/刪除當天紀錄後，呼叫 invalidateDietCaches(date)，
 // 這個 date 一定要跟被異動的那筆紀錄的記錄日期一致，才能讓這裡的 key 對上。
+
+// 使用者操作「記錄日期」欄位（可手動改）
+//        ↓
+// 存進 Notion 的 Date 欄位 = recordDate
+//        ↓
+// API 回傳 recordDate（ISO字串）
+//        ↓
+// DietRecordList.tsx: formatLocalTime(record.recordDate)
+//        ↓
+// 畫面顯示：使用者本地時區的時間 ✅
+
 export function useDietRecordsByDate<T = NotionRecord>(date: string | null) {
   const { data, error, isLoading } = useSWR(
     date ? `/api/diet?date=${date}` : null,

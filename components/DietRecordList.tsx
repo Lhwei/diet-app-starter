@@ -24,6 +24,19 @@
 // z-20 是為了蓋過紀錄列表本身（列表本身沒有設 z-index，預設為
 // auto，實際疊放順序看 DOM順序，此處明確設定 z-index 避免列表卡片的陰影
 // 或其他堆疊上下文意外蓋到 sticky 容器上方）。
+//
+// 時區修正（本次異動）：
+// 1. toDateKey 改從 lib/date/timezone 引入（時區安全版），不再用
+//    lib/date/weekUtils 的本地時間版本，統一資料層的日期key來源。
+// 2. waterIntakeMl 篩選改用 toDateKey(new Date(record.recordDate)) 比對，
+//    取代原本直接切UTC ISO字串前10碼的寫法，避免跨日誤判。
+// 3. 卡片上顯示的時間，改用「記錄日期」欄位（record.recordDate，真正的
+//    Date類型，使用者可手動更改）即時換算使用者本地時區，取代原本顯示
+//    record.recordTitle（Notion title文字欄位，系統自動生成，過去因為
+//    伺服器端 toLocaleString 沒指定 timeZone，在Vercel的UTC環境下算出
+//    來的時間會是錯的，且一旦寫進Notion就無法回頭修正)。
+//    formatLocalTime 用 undefined locale + getUserTimeZone() 動態偵測
+//    使用者瀏覽器時區，不假設所有使用者都在台灣。
 
 import { useEffect, useState } from 'react'
 import DietRecordForm from './DietRecordForm'
@@ -31,7 +44,7 @@ import LoadingSpinner from './LoadingSpinner'
 import WeekCalendarHeader from './WeekCalendarHeader'
 import DailyNutritionSummary from './DailyNutritionSummary'
 import SwipeableRecordCard from './SwipeableRecordCard'
-import { toDateKey } from '@/lib/date/weekUtils'
+import { toDateKey, getUserTimeZone } from '@/lib/date/timezone'
 import { type PhysioRecordRaw } from '@/lib/dashboard/aggregatePhysio'
 import {
   invalidateDietCaches,
@@ -40,6 +53,17 @@ import {
   usePhysioSummary,
 } from '@/lib/hooks/useNotionData'
 import { useSearchParams, useRouter } from 'next/navigation'
+
+// 用「記錄日期」欄位（record.recordDate，ISO字串）在使用者裝置端
+// 即時換算本地時區時間，不依賴伺服器組好的 recordTitle 字串顯示。
+function formatLocalTime(dateInput: string | Date, timeZone: string = getUserTimeZone()): string {
+  return new Intl.DateTimeFormat(undefined, {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone,
+  }).format(typeof dateInput === 'string' ? new Date(dateInput) : dateInput)
+}
 
 function buildDefaultRecordDate(selectedDate: Date): Date {
   const now = new Date()
@@ -145,7 +169,7 @@ export default function DietRecordList() {
   const waterIntakeMl = physioError
     ? null
     : (physioRecords ?? [])
-        .filter((record: any) => String(record.recordDate).slice(0, 10) === dateKey)
+        .filter((record: any) => toDateKey(new Date(record.recordDate)) === dateKey)
         .reduce(
           (sum: number, record: any) => sum + (Number(record.waterIntake) || 0),
           0
@@ -232,7 +256,7 @@ export default function DietRecordList() {
                         )}
 
                         <span className="text-xs text-gray-400">
-                          {record.recordTitle}
+                          {formatLocalTime(record.recordDate)}
                         </span>
                       </div>
 

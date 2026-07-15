@@ -5,6 +5,7 @@ import { queryDatabase, createDatabasePage, updatePageProperties, trashPage, ver
 import { notionPageToRecord, formValuesToNotionProperties } from '@/lib/notion/dietMapper'
 import { cachedQueryDatabase, invalidateDatabaseCache } from '@/lib/notion/queryCache'
 import { handleApiError } from '@/lib/api/errorResponse'
+
 async function getUserAndDietDbId() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -35,14 +36,18 @@ function buildRecordDateISO(values: Record<string, any>): string {
 }
 
 // 「記錄時間」是Notion資料庫的title欄位，這裡統一產生一個可讀的標題字串。
-// 修正重點：原本只認 values.recordTitle，若前端沒帶就一律用「伺服器收到請求當下」的時間，
-// 這會導致使用者手動把 recordDate 改成過去日期時，「記錄日期」Date欄位正確存成過去日期，
-// 但作為標題的「記錄時間」title卻還是顯示現在時間，兩個本該同步的欄位對不起來。
-// 現在改成：優先用 recordTitle；沒有的話，用 recordDateISO 對應的時間點組標題，
-// 而不是另外重新 new Date()，確保title字串跟Date欄位永遠是同一個時間點。
+// 時區修正（本次異動）：原本用 toLocaleString('zh-TW', { hour12: false }) 組時間字串，
+// 但這裡是伺服器端執行（Vercel預設UTC時區），沒指定timeZone時算出來的時間是
+// 「伺服器時區的時間」，不是使用者實際所在時區的時間，導致寫進Notion的title
+// 字串本身就是錯的，且一旦寫入就無法回頭依使用者時區還原。
+// 現在改成：優先沿用使用者手動輸入的 recordTitle（原樣保留，不受影響）；
+// 若沒手動輸入，只用 toISOString() 存一個中立、不假設任何時區的UTC字串，
+// 純粹供Notion後台管理辨識用途。App前端顯示時間一律改用「記錄日期」欄位
+// （record.recordDate，真正的Date類型）搭配 formatLocalTime() 在使用者
+// 裝置端即時換算本地時區，不再依賴這裡組出來的字串做UI顯示。
 function buildRecordTitle(values: Record<string, any>, recordDateISO: string): string {
   if (values.recordTitle) return String(values.recordTitle)
-  return new Date(recordDateISO).toLocaleString('zh-TW', { hour12: false })
+  return new Date(recordDateISO).toISOString()
 }
 
 // GET /api/diet?days=30       舊行為：查詢近N天的飲食紀錄，走快取（儀表板圖表使用）
