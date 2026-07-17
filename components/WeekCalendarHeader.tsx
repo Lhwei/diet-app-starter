@@ -3,7 +3,7 @@
 // App式週曆header：顯示「年月」在最上方(點擊可選年份/月份)，
 // 下方是一週7天(週一到週日)的日期格，可左右切換上下週，點選某天即切換選中日期
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { getWeekStart, getWeekDates, addWeeks, isSameDay, formatYearMonth, WEEKDAY_LABELS } from '@/lib/date/weekUtils'
 
 interface WeekCalendarHeaderProps {
@@ -15,8 +15,14 @@ export default function WeekCalendarHeader({ selectedDate, onSelectDate }: WeekC
   const [weekStart, setWeekStart] = useState(() => getWeekStart(selectedDate))
   const [showYearMonthPicker, setShowYearMonthPicker] = useState(false)
 
+  // ✅ SSR 時為 null，Client mount 後才賦值，徹底避免 mismatch
+  const [today, setToday] = useState<Date | null>(null)
+
+  useEffect(() => {
+    setToday(new Date())
+  }, [])
+
   const weekDates = getWeekDates(weekStart)
-  const today = new Date()
 
   function goToPreviousWeek() {
     setWeekStart((prev) => addWeeks(prev, -1))
@@ -30,7 +36,6 @@ export default function WeekCalendarHeader({ selectedDate, onSelectDate }: WeekC
     onSelectDate(d)
   }
 
-  // 年月選擇：簡單的年份+月份下拉，選擇後跳到該月第一天所在週
   const currentYear = weekStart.getFullYear()
   const currentMonth = weekStart.getMonth()
   const yearOptions = Array.from({ length: 6 }, (_, i) => currentYear - 3 + i)
@@ -88,7 +93,8 @@ export default function WeekCalendarHeader({ selectedDate, onSelectDate }: WeekC
         <div className="flex-1 grid grid-cols-7 gap-1">
           {weekDates.map((d, i) => {
             const selected = isSameDay(d, selectedDate)
-            const isToday = isSameDay(d, today)
+            // ✅ today 為 null 時（SSR階段），isToday 一律 false，跟 Server 輸出一致
+            const isToday = today ? isSameDay(d, today) : false
             return (
               <button
                 key={d.toISOString()}

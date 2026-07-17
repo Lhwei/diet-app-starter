@@ -42,8 +42,19 @@
 // 「型別上過得去、執行期照樣拿到真實資料」的彈性層。如果之後某個元件用到
 // 某個欄位卻發現是 undefined，那是要回頭檢查對應 API route 有沒有回傳該
 // 欄位，跟這裡的轉型寫法無關。
+//
+// ⚠️ 時區修正（本次異動）：
+// useDietRecordsByDate / usePhysioRecordsByDate 呼叫單日查詢API時，
+// 現在會額外帶上 tz 參數（使用者瀏覽器端偵測到的IANA時區字串，例如
+// 'Asia/Taipei'），讓後端能正確判斷「使用者當地的那一天」，而不是誤用
+// 伺服器（Vercel容器，預設UTC）的時區去切日期界線。
+// 這解決了「使用者本地時間已經跨日、但伺服器判斷還沒跨日（或反過來）」
+// 導致跨日邊界紀錄被分到錯誤日期的問題。
+// getUserTimeZone() 必須在瀏覽器端執行才有意義，這裡的hook本身就是
+// client component使用的('use client'元件)，所以呼叫時機沒有問題。
 
 import useSWR, { SWRConfiguration, mutate as globalMutate } from 'swr'
+import { getUserTimeZone } from '@/lib/date/timezone'
 
 // Notion 資料庫單筆紀錄的寬鬆型別：欄位是動態的（依 dietFieldsConfig／
 // physioFieldsConfig 定義），不特別為每個資料庫寫嚴格 interface，只保證
@@ -130,7 +141,7 @@ export function useDietRecords<T = NotionRecord>(days: number = 30) {
 // ----------------------------------------------------------------------------
 // useDietRecordsByDate(date)
 // ----------------------------------------------------------------------------
-// 對應 API：GET /api/diet?date=YYYY-MM-DD
+// 對應 API：GET /api/diet?date=YYYY-MM-DD&tz=Asia/Taipei
 // 用途：App式週曆日檢視，讀取單一日期的飲食紀錄。
 //
 // ⚠️ records 預設為 null 而不是 []，原因：
@@ -145,6 +156,12 @@ export function useDietRecords<T = NotionRecord>(days: number = 30) {
 // ⚠️ 這裡一定要用 dateListConfig（關閉 keepPreviousData），不能用
 // defaultConfig，理由見上方 dateListConfig 的說明：否則切換週曆日期時，
 // 畫面會短暫顯示「上一個被看過的日期」的飲食紀錄。
+//
+// ⚠️ 時區修正（本次異動）：
+// 這裡帶上的 tz 參數是用 getUserTimeZone() 在瀏覽器端當下偵測到的真實
+// IANA時區字串（例如'Asia/Taipei'），不能拿掉，否則後端會退回用UTC
+// 判斷日界線，遇到跨日邊界的紀錄（例如台灣時間清晨6點多寫的紀錄，
+// 換算UTC還是前一天）就會被分錯日期。
 //
 // 建議套用的地方：DietRecordList.tsx
 //
@@ -162,8 +179,9 @@ export function useDietRecords<T = NotionRecord>(days: number = 30) {
 // 畫面顯示：使用者本地時區的時間 ✅
 
 export function useDietRecordsByDate<T = NotionRecord>(date: string | null) {
+  const timeZone = getUserTimeZone()
   const { data, error, isLoading } = useSWR(
-    date ? `/api/diet?date=${date}` : null,
+    date ? `/api/diet?date=${date}&tz=${encodeURIComponent(timeZone)}` : null,
     fetcher,
     dateListConfig
   )
@@ -193,21 +211,24 @@ export function usePhysioRecords<T = NotionRecord>(days: number = 30) {
 // ----------------------------------------------------------------------------
 // usePhysioRecordsByDate(date)
 // ----------------------------------------------------------------------------
-// 對應 API：GET /api/physio?date=YYYY-MM-DD
+// 對應 API：GET /api/physio?date=YYYY-MM-DD&tz=Asia/Taipei
 // 用途：讀取週曆所選日期的生理紀錄，例如飲水量（給 DailyNutritionSummary
 // 的飲水量欄位用）。
 //
-// ⚠️ 前提：後端 /api/physio 必須支援 ?date= 這個 query param，依 recordDate
-// 篩選單日資料。若尚未支援，這個 hook 會拿到錯誤資料，需要先補 API route。
+// ⚠️ 前提：後端 /api/physio 必須支援 ?date= 跟 ?tz= 這兩個 query param，
+// 依「使用者當地時區的當天」篩選單日資料。若尚未支援tz參數，需一併補上，
+// 否則會遇到跟diet API修正前一樣的跨日邊界問題。
 //
-// 跟 useDietRecordsByDate 一樣用 dateListConfig、records 預設 null，理由相同：
-// 避免切換日期時沿用前一天資料，並區分「載入中」跟「這天沒紀錄」。
+// 跟 useDietRecordsByDate 一樣用 dateListConfig、records 預設 null、
+// 一樣帶 tz 參數，理由相同：避免切換日期時沿用前一天資料，並讓後端能正確
+// 判斷「使用者當地的那一天」而不是伺服器容器的時區。
 //
 // 寫入後怎麼處理：新增/編輯/刪除生理紀錄後，呼叫 invalidatePhysioCaches(date)，
 // date 帶上被異動那筆紀錄的日期，這樣單日飲水量才會一起刷新。
 export function usePhysioRecordsByDate<T = NotionRecord>(date: string | null) {
+  const timeZone = getUserTimeZone()
   const { data, error, isLoading } = useSWR(
-    date ? `/api/physio?date=${date}` : null,
+    date ? `/api/physio?date=${date}&tz=${encodeURIComponent(timeZone)}` : null,
     fetcher,
     dateListConfig
   )
@@ -339,6 +360,12 @@ export function usePhysioSummary<T = NotionRecord>(days: number) {
 //   await fetch('/api/diet', { method: 'POST', body: JSON.stringify(payload) })
 //   void invalidateDietCaches(dateKey) // 不加 await，背景更新
 //   onSuccess()                        // 立刻關表單/導頁
+//
+// ⚠️ 注意（本次異動後）：/api/diet?date=... 的 key 現在多帶了 tz 參數
+// （例如 /api/diet?date=2026-07-17&tz=Asia%2FTaipei），下面
+// invalidateDietCaches／invalidatePhysioCaches 對單日key的失效方式改用
+// invalidateByPrefix 而不是精確字串比對，這樣不管使用者當前瀏覽器時區是
+// 什麼字串，只要date前綴對上就會一併失效，不會因為tz編碼差異而漏刷新。
 
 function invalidateByPrefix(prefix: string) {
   return globalMutate((key) => typeof key === 'string' && key.startsWith(prefix), undefined, {
@@ -354,13 +381,13 @@ function invalidateByPrefix(prefix: string) {
 //   await fetch('/api/diet', { method: 'POST', body: JSON.stringify({...}) })
 //   void invalidateDietCaches('2026-07-13')
 //   // 效果：
-//   // - /api/diet?date=2026-07-13            立即重抓，清單馬上出現新紀錄
+//   // - /api/diet?date=2026-07-13&tz=...      立即重抓，清單馬上出現新紀錄
 //   // - /api/diet?days=7 / 30 / 90 ...        全部標記過期，重新整理
 //   // - /api/dashboard/diet-summary?days=... 全部標記過期（7/30/90 都涵蓋），
 //   //   dashboard 不會再顯示舊熱量
 export async function invalidateDietCaches(date?: string) {
   await Promise.all([
-    date ? globalMutate(`/api/diet?date=${date}`) : Promise.resolve(),
+    date ? invalidateByPrefix(`/api/diet?date=${date}`) : Promise.resolve(),
     invalidateByPrefix('/api/diet?days='),
     invalidateByPrefix('/api/dashboard/diet-summary?'),
   ])
@@ -384,7 +411,7 @@ export async function invalidateDietCaches(date?: string) {
 //   void invalidatePhysioCaches('2026-07-13')
 export async function invalidatePhysioCaches(date?: string) {
   await Promise.all([
-    date ? globalMutate(`/api/physio?date=${date}`) : Promise.resolve(),
+    date ? invalidateByPrefix(`/api/physio?date=${date}`) : Promise.resolve(),
     invalidateByPrefix('/api/physio?days='),
     invalidateByPrefix('/api/dashboard/physio-summary?'),
     globalMutate('/api/dashboard/weight-projection'),

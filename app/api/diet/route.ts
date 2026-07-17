@@ -5,6 +5,7 @@ import { queryDatabase, createDatabasePage, updatePageProperties, trashPage, ver
 import { notionPageToRecord, formValuesToNotionProperties } from '@/lib/notion/dietMapper'
 import { cachedQueryDatabase, invalidateDatabaseCache } from '@/lib/notion/queryCache'
 import { handleApiError } from '@/lib/api/errorResponse'
+import { getDayBoundsInTimeZone } from '@/lib/date/timezone'
 
 async function getUserAndDietDbId() {
   const supabase = await createClient()
@@ -50,9 +51,14 @@ function buildRecordTitle(values: Record<string, any>, recordDateISO: string): s
   return new Date(recordDateISO).toISOString()
 }
 
-// GET /api/diet?days=30       舊行為：查詢近N天的飲食紀錄，走快取（儀表板圖表使用）
-// GET /api/diet?date=2026-07-06  新行為：查詢單日飲食紀錄（App式週曆日檢視使用），走快取
+// GET /api/diet?days=30                         舊行為：查詢近N天的飲食紀錄，走快取（儀表板圖表使用）
+// GET /api/diet?date=2026-07-06&tz=Asia/Taipei   新行為：查詢單日飲食紀錄（App式週曆日檢視使用），走快取
 // 兩種模式二選一：只要帶了 date 參數，就走單日查詢；否則維持原本 days 模式
+//
+// tz 參數（本次新增）：
+// 必須由前端用 getUserTimeZone()（瀏覽器端偵測）取得後帶上來，不能在這裡用伺服器端的
+// 時區判斷，因為Vercel等部署環境的容器時區通常是UTC，跟使用者實際所在時區無關。
+// 沒帶tz時退回'UTC'，行為明確可預期，不偷偷假設任何地區時區（例如不假設台灣+8）。
 export async function GET(request: Request) {
   const result = await getUserAndDietDbId()
   if ('error' in result) {
@@ -61,16 +67,19 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url)
   const dateParam = searchParams.get('date')
+  const tzParam = searchParams.get('tz') || 'UTC'
 
   if (dateParam) {
     try {
       const accessToken = await getValidNotionAccessToken(result.userId)
 
       const records = await cachedQueryDatabase(
-        ['db', result.dietDbId, 'diet-daily', result.userId, dateParam],
+        // tzParam 一併納入快取key：同一個date字串在不同時區下，對應的UTC查詢區間不同，
+        // 若不把tz納入key，會出現「使用者A查台北時區的7/17」跟
+        // 「使用者B查東京時區的7/17」共用到同一份錯誤快取結果的風險
+        ['db', result.dietDbId, 'diet-daily', result.userId, dateParam, tzParam],
         async () => {
-          const dayStart = new Date(`${dateParam}T00:00:00`)
-          const dayEnd = new Date(`${dateParam}T23:59:59.999`)
+          const { dayStart, dayEnd } = getDayBoundsInTimeZone(dateParam, tzParam)
 
           let allRecords: any[] = []
           let cursor: string | undefined = undefined
